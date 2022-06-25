@@ -47,6 +47,7 @@ On debian-based systems you can do:
 apt install build-essential emacs
 
 *** Building the code:
+http://fgiasson.com/blog/index.php/2016/10/26/literate-clojure-programming-tangle-all-in-org-mode/
 To (un)tangle the code from the document just type 'make tangle' from the yumi folder
 
 
@@ -136,7 +137,73 @@ https://github.com/nim-lang/nimble#readme
 
 ** Helloworld Examples
 
-** License
+TODO
+
+* Roadmap
+
+In order to create a system that can fit all the feature requirements, Yumi steals ideas shamelessly from other languages, but we need to find compatible features.
+Maru is a practical dynamic COLA, ie. the user has control over all phases of application development, deployment and execution inc hardware eg. FPGA backend.
+As such, we should be able to iteratively evolve the maru system to include other features that we require, specifically fine-grained control over static types, for ease of reasoning,
+and optimisation of execution. 
+
+If we wish to add this control, and concurrency to the system, we require a solid theory of the interations between dynamic and statically bound variables, together with concurrent features.
+Wat gives us this delimited dynamic binding theory in a portable form. Wat makes use of the underlying language types (see DDBinding paper), so wat should be able to use maru's user-defined type system.
+
+From the Flix language, we can see that it is beneficial to have an embedded first-class logic language, as well as a unifying set of lattice types.
+In particular the lattice treatment of null in cuelang is a good indicator of the advantages of unification, as well as in Anna, where lattices are used to resolve conflicts.
+The static analyis of memory usage in ASAP makes use of three-value-logic types extensively.
+As such, we look to extend maru's types with lattice types and three-value-logic types.
+
+From Shen, Flix and Maude, we can see that we can use an embedded logic language to do formal verification, of which type checking is one aspect.
+Due to the requirement for metacircularity, we require an extremely compact logic language so that we may be able to compile it from the code we have proven with it.
+Microkanren is 39LOC and can perform the Calculus Of Constructions (CoC), Membership Equational logic (as MEqLogic is a subset of MKFOL - many-kinded first-order logic)
+and relational logic. 
+Furthermore, we can follow the example of shen to provide type-checking and inference via sequent calculus - we use microkanren to compile the sequent calculus
+statements down to the underlying functional language implementation.
+
+Lastly, with regard to metacircularity, comments in the language can be in org-mode form, hence we need an org-mode parser (using EBNF grammar) and tangling tools
+to complete the full metacircular toolchain.
+
+One of the more active debates in the Haskell community is with regard to I/O as a side effect of monadic programming. Perhaps a more flexible model lies with
+Algebraic Effects, and given that Koka makes good use of them in conjunction with static (Hindley-Milner) type analysis and concurrency with dynamic binding,
+we can clearly see that these features dovetail well with maru in extending our featureset to that required by Yumi.
+Koka is written in Haskell, but the team maintain C libraries, and we also may be able to use zero-cost effect handlers to provide a path to controlling side effects
+and transforming dynamic bindings and operation to static constructs.
+
+To add to the static needs, to be deterministic ie. realtime, we cannot use a GC to manage memory due to the unpredictability *and* size requirements of microcontrollers
+Both Perceus reference counting and ASAP static analysis require a good formalism of computation as per Koka to be able to fully check memory bounds (including cycles).
+It is clear from Sectorlisp and Ribbit that we can run GC in a small system, however it is also clear that the less garbage generated, the less there is to clear up
+- Sectorlisp makes do with immutable cells and acyclic operation. Concatenative languages can go one better in that mutable data is passed in-place (in memory)
+from function to function, so there is little to clear up.
+Koka uses a phrase FBIP, functional-but-in-place, to describe a similar set of optimisations for monadic ie. chainable operations, and we aim to use that here,
+along with a suitable concatenative syntax.
+
+With respect to the concatenative syntax required, we look to be able to elide function parameters, so that we indicate that the operations on the parameters 
+can be done in-place eg. fg(my_stack) or fg(my_array).
+Snake case eg. my_function appears to be more compatible across languages and platforms (some langs eg. Oberon and platforms eg. Windows are case insensitive,
+and SQL and Python don't play nicely with kebab case eg. my-function), so we should make an attempt to use that. 
+Syntax should be IDE-agnostic, and that also goes for serialisation and encoding eg. urlencoding. As such, significant whitespace can be a hindrance.
+Lisp has a very uniform syntax which helps it's homoiconicity (note that Red is homoiconic as well though) and does not distinguish between different forms with it's
+braces eg. the difference between a code region {}, function {}, param (), array [] etc. is not there in lisp, we should attempt to remove line noise by elision of
+syntax where possible simliarly to Koka.
+Clojure's Edn format illustrates some advantages of using a language subset for configuration, serialisation and data. If we have language features segregated into
+modules, we can restrict module usage for different scenarios eg. configuration files should only be able to use a non-turing-complete set of operations.
+Binary serialisation is a useful feature here, both for messaging, and for the static/bytecode parts of the operating system. We look to take features from Ribbit in
+serialising the entire language, and bytecode format, to a compact representation (binary).
+
+With the above modularisation, we can prove the safety of a format much easier - if we treat each (pure ie. no side-effects, just mathematically sound) module as a
+theory, or set of theories if we do imports, we can prove that the format adheres to certain principles eg. turing-incomplete.
+In a fully dynamic system, a class and it's instance are both objects, as with modules and packages, prototypes and children, traits and types, envs and parents etc.
+It is still useful to refer to the above constructs by their semantic name, despite any underlying execution similarities.
+
+To be able to build the system from scratch ie. not relying on even firmware, we need to look at bootstrapping.
+The impetus here is one of security, technically we cannot trust anything not checked by-eye. 
+In the most primitive case (stage0), we would look to type in instructions that create a hex editor, with which we can assemble a hex assembler, and then use that
+to build Yumi. Sectorlisp is very small so a good model for how to build a minimal system, it also is portable across different platforms, though interpreted.
+Ribbit has an AOT compiler and multiple VM backends, so Yumi will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
+build toolchain.
+
+* License
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
@@ -812,71 +879,6 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
-
-
-* Roadmap
-
-In order to create a system that can fit all the feature requirements, Yumi steals ideas shamelessly from other languages, but we need to find compatible features.
-Maru is a practical dynamic COLA, ie. the user has control over all phases of application development, deployment and execution inc hardware eg. FPGA backend.
-As such, we should be able to iteratively evolve the maru system to include other features that we require, specifically fine-grained control over static types, for ease of reasoning,
-and optimisation of execution. 
-
-If we wish to add this control, and concurrency to the system, we require a solid theory of the interations between dynamic and statically bound variables, together with concurrent features.
-Wat gives us this delimited dynamic binding theory in a portable form. Wat makes use of the underlying language types (see DDBinding paper), so wat should be able to use maru's user-defined type system.
-
-From the Flix language, we can see that it is beneficial to have an embedded first-class logic language, as well as a unifying set of lattice types.
-In particular the lattice treatment of null in cuelang is a good indicator of the advantages of unification, as well as in Anna, where lattices are used to resolve conflicts.
-The static analyis of memory usage in ASAP makes use of three-value-logic types extensively.
-As such, we look to extend maru's types with lattice types and three-value-logic types.
-
-From Shen, Flix and Maude, we can see that we can use an embedded logic language to do formal verification, of which type checking is one aspect.
-Due to the requirement for metacircularity, we require an extremely compact logic language so that we may be able to compile it from the code we have proven with it.
-Microkanren is 39LOC and can perform the Calculus Of Constructions (CoC), Membership Equational logic (as MEqLogic is a subset of MKFOL - many-kinded first-order logic)
-and relational logic. 
-Furthermore, we can follow the example of shen to provide type-checking and inference via sequent calculus - we use microkanren to compile the sequent calculus
-statements down to the underlying functional language implementation.
-
-Lastly, with regard to metacircularity, comments in the language can be in org-mode form, hence we need an org-mode parser (using EBNF grammar) and tangling tools
-to complete the full metacircular toolchain.
-
-One of the more active debates in the Haskell community is with regard to I/O as a side effect of monadic programming. Perhaps a more flexible model lies with
-Algebraic Effects, and given that Koka makes good use of them in conjunction with static (Hindley-Milner) type analysis and concurrency with dynamic binding,
-we can clearly see that these features dovetail well with maru in extending our featureset to that required by Yumi.
-Koka is written in Haskell, but the team maintain C libraries, and we also may be able to use zero-cost effect handlers to provide a path to controlling side effects
-and transforming dynamic bindings and operation to static constructs.
-
-To add to the static needs, to be deterministic ie. realtime, we cannot use a GC to manage memory due to the unpredictability *and* size requirements of microcontrollers
-Both Perceus reference counting and ASAP static analysis require a good formalism of computation as per Koka to be able to fully check memory bounds (including cycles).
-It is clear from Sectorlisp and Ribbit that we can run GC in a small system, however it is also clear that the less garbage generated, the less there is to clear up
-- Sectorlisp makes do with immutable cells and acyclic operation. Concatenative languages can go one better in that mutable data is passed in-place (in memory)
-from function to function, so there is little to clear up.
-Koka uses a phrase FBIP, functional-but-in-place, to describe a similar set of optimisations for monadic ie. chainable operations, and we aim to use that here,
-along with a suitable concatenative syntax.
-
-With respect to the concatenative syntax required, we look to be able to elide function parameters, so that we indicate that the operations on the parameters 
-can be done in-place eg. fg(my_stack) or fg(my_array).
-Snake case eg. my_function appears to be more compatible across languages and platforms (some langs eg. Oberon and platforms eg. Windows are case insensitive,
-and SQL and Python don't play nicely with kebab case eg. my-function), so we should make an attempt to use that. 
-Syntax should be IDE-agnostic, and that also goes for serialisation and encoding eg. urlencoding. As such, significant whitespace can be a hindrance.
-Lisp has a very uniform syntax which helps it's homoiconicity (note that Red is homoiconic as well though) and does not distinguish between different forms with it's
-braces eg. the difference between a code region {}, function {}, param (), array [] etc. is not there in lisp, we should attempt to remove line noise by elision of
-syntax where possible simliarly to Koka.
-Clojure's Edn format illustrates some advantages of using a language subset for configuration, serialisation and data. If we have language features segregated into
-modules, we can restrict module usage for different scenarios eg. configuration files should only be able to use a non-turing-complete set of operations.
-Binary serialisation is a useful feature here, both for messaging, and for the static/bytecode parts of the operating system. We look to take features from Ribbit in
-serialising the entire language, and bytecode format, to a compact representation (binary).
-
-With the above modularisation, we can prove the safety of a format much easier - if we treat each (pure ie. no side-effects, just mathematically sound) module as a
-theory, or set of theories if we do imports, we can prove that the format adheres to certain principles eg. turing-incomplete.
-In a fully dynamic system, a class and it's instance are both objects, as with modules and packages, prototypes and children, traits and types, envs and parents etc.
-It is still useful to refer to the above constructs by their semantic name, despite any underlying execution similarities.
-
-To be able to build the system from scratch ie. not relying on even firmware, we need to look at bootstrapping.
-The impetus here is one of security, technically we cannot trust anything not checked by-eye. 
-In the most primitive case (stage0), we would look to type in instructions that create a hex editor, with which we can assemble a hex assembler, and then use that
-to build Yumi. Sectorlisp is very small so a good model for how to build a minimal system, it also is portable across different platforms, though interpreted.
-Ribbit has an AOT compiler and multiple VM backends, so Yumi will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
-build toolchain.
 
 * Implementation
 
@@ -3740,7 +3742,7 @@ int main(int argc, char **argv)
     {
 	if (!opt_b)
 	{
-	    replPath(L"boot.l");
+	    replPath(L"src/boot.l");
 	    opt_b= 1;
 	}
 	else
@@ -3772,7 +3774,7 @@ int main(int argc, char **argv)
   set(output, Variable,value, newLong((long)stdout));
 
   if (!repled) {
-    if (!opt_b) replPath(L"boot.l");
+    if (!opt_b) replPath(L"src/boot.l");
     replFile(stdin, L"<stdin>");
     printf("\nmorituri te salutant\n");
   }
@@ -5106,20 +5108,22 @@ The core module is eval.l. boot.l and emit.l are run after this.
 (define EOF	-1)
 (define DONE	-4)	;; cannot be the same as a tagged immediate
 
-(define <undefined>	 0)
-(define <long>		 1)
-(define <string>	 2)
-(define <symbol>	 3)
-(define <pair>		 4)
-(define <_array>	 5)
-(define <array>		 6)
-(define <expr>		 7)
-(define <form>		 8)
-(define <fixed>		 9)
-(define <subr>		10)
-(define <variable>	11)
-(define <env>		12)
-(define <context>	13)
+(define <data>		 1)
+(define <long>		 2)
+(define <double>	 3)
+(define <string>	 4)
+(define <symbol>	 5)
+(define <pair>		 6)
+(define <_array>	 7)
+(define <array>		 8)
+(define <expr>		 9)
+(define <form>		10)
+(define <fixed>		11)
+(define <subr>		12)
+(define <variable>	13)
+(define <env>		14)
+(define <context>	15)
+
 
 (define symbols			0)
 (define globals			0)
@@ -5148,6 +5152,7 @@ The core module is eval.l. boot.l and emit.l are run after this.
 (define f_define		0)
 
 (define opt_verbose		0)
+(define opt_optimised		0)
 
 (define-function new-bits (type size)
   (let ((obj (gc_malloc_atomic size)))
@@ -5361,8 +5366,8 @@ The core module is eval.l. boot.l and emit.l are run after this.
   (let ((len (k_array_length obj)))
     (k_array_append obj value)
     (and (< index len) 
-	 (let ((elts (get <array> _array obj))
-	       (oops (+ elts (* 4 index))))
+	 (let* ((elts (get <array> _array obj))
+		(oops (+ elts (* 4 index))))
 	   (memmove (+ 4 oops) oops (* 4 (- len index))))))
   (k_set_array_at obj index value))
 
@@ -5697,12 +5702,12 @@ The core module is eval.l. boot.l and emit.l are run after this.
 	 (index (k_array_length bindings)))
     (while (>= (set index (- index 1)) 0)
       (let ((var (k_array_at bindings index)))
-	(and (= name (get <variable> value var))
+	(and (= name (get <variable> name var))
 	     (let ()
-	       (set <variable> value var value)
+	       (put <variable> value var value)
 	       (return var)))))
-    (let ((off      (get_long (get <env> offset env)))
-	  (var      (new-<variable> name value env off)))
+    (let* ((off (get_long (get <env> offset env)))
+	   (var (new-<variable> name value env off)))
       (gc-protect (var)
 	(put <env> offset env (new-<long> (+ off 1)))
 	(k_array_append bindings var)))))
@@ -6224,6 +6229,14 @@ The core module is eval.l. boot.l and emit.l are run after this.
       (and (>= c 0)
 	   (new-<long> c)))))
 
+(define-function subr_putc (args ctx)
+  (let ((arg (k_car args))
+	(obj (k_cadr args)))
+    (or arg (set arg (get <variable> value input)))
+    (or (is_long arg) (fatal "non-integer stream id in putc"))
+    (or (is_long obj) (fatal "non-integer character in putc"))
+    (new-<long> (putc (get_long arg)))))
+
 (define-function subr_format (args ctx)
   (arity2 "format" args)
   (let ((ofmt (k_car args))
@@ -6304,7 +6317,7 @@ The core module is eval.l. boot.l and emit.l are run after this.
   (arity2 "allocate" args)
   (let ((type (get_head args))
 	(size (get_head (get_tail args))))
-    (and (is_long type) (is_long size
+    (and (is_long type) (is_long size)
 	 (new-oops (get_long type) (* (get_long size) 4)))))
 
 (define-function subr_type_of	(args ctx)	(and args (new-<long> (get-type (k_car args)))))
@@ -6338,7 +6351,6 @@ The core module is eval.l. boot.l and emit.l are run after this.
   (let ((obj (get_head args))
 	(arg (get_head (get_tail args)))
 	(val (get_head (get_tail (get_tail args)))))
-    (or (< (gc_size (get <array> _array symbols)) 8192) (fatal1 "D: symbols is wrong size %d\n" (gc_size (get <array> _array symbols))))
     (and obj (not (is_long obj))
 	 (is_long arg)
 	 (set-oop-at obj (get_long arg) val))
@@ -6416,8 +6428,34 @@ The core module is eval.l. boot.l and emit.l are run after this.
 (define-function subr_verbose (args ctx)
   (let ((arg (k_car args)))
     (if (is_long arg)
-	(set opt_verbose (get_long arg)))
-    arg))
+	(set opt_verbose (get_long arg))
+      (new-<long> opt_verbose))))
+
+(define-function subr_optimised (args ctx)
+  (let ((arg (k_car args)))
+    (if (is_long arg)
+	(set opt_optimised (get_long arg))
+      (new-<long> opt_optimised))))
+
+(define-function subr_read (args ctx)
+  (if (= () args)
+      (let ((obj (k_read stdin)))
+	(and (= DONE obj) (set obj ()))
+	obj)
+    (let ((arg (k_car args)))
+      (or (is <string> arg) (fatal1 "read: non-String argument: " arg))
+      (let* ((path   (get <string> _bits arg))
+	     (stream (fopen path "r")))
+	(if stream
+	    (let* ((head (new-<pair> () ()))
+		   (tail head)
+		   (obj  ()))
+	      (gc-protect (head obj)
+	        (while (!= DONE (set obj (k_read stream)))
+		  (set tail (set_tail tail (new-<pair> obj ())))))
+	      (fclose stream)
+	      (get_tail head))
+	  ())))))
 
 ;;; ----------------------------------------------------------------
 
@@ -6529,6 +6567,7 @@ The core module is eval.l. boot.l and emit.l are run after this.
   (define-subr  "open"			subr_open)
   (define-subr  "close"			subr_close)
   (define-subr  "getc"			subr_getc)
+  (define-subr  "putc"			subr_putc)
   (define-subr  "allocate"		subr_allocate)
   (define-subr  "type-of"		subr_type_of)
   (define-subr  "string?"		subr_stringP)
@@ -6551,6 +6590,8 @@ The core module is eval.l. boot.l and emit.l are run after this.
   (define-subr  "symbol->string"	subr_symbol_string)
   (define-subr  "long->string"		subr_long_string)
   (define-subr  "verbose"		subr_verbose)
+  (define-subr  "optimised"		subr_optimised)
+  (define-subr  "read"			subr_read)
 
   (let ((tmp ()))
     (gc-protect (tmp)
@@ -6576,7 +6617,8 @@ The core module is eval.l. boot.l and emit.l are run after this.
       (gc-protect (args)
         (put <variable> value arguments (get_tail argl))
 	(cond
-	  ((not (strcmp arg "-v"))	(set opt_verbose (+ 1 opt_verbose)))
+	  ((not (strcmp arg "-v"))	(set opt_verbose   (+ 1 opt_verbose)))
+	  ((not (strcmp arg "-O"))	(set opt_optimised (+ 1 opt_optimised)))
 	  ((not (strcmp arg "-"))		(repl_stream stdin))
 	  (else				(let ((stream (fopen arg "r")))
 					  (or stream (fatal1 "no such file: %s" arg))
@@ -6601,9 +6643,7 @@ The core module is eval.l. boot.l and emit.l are run after this.
 We inject utilities just to illustrate - modularise code later
 
 #+begin_src lisp :noweb yes :mkdirp yes :tangle src/boot.l
-; boot.l for maru-boostrap
-;
-; (verbose 2)
+(define unit-testing? '(t))
 
 (define list (lambda args args))
 
@@ -6629,8 +6669,6 @@ We inject utilities just to illustrate - modularise code later
     (%print "[m\n")
     (abort)))
 
-; XXX TODO blah ditch the lisp-isms
-
 (define caar (lambda (x) (car (car x))))
 (define cadr (lambda (x) (car (cdr x))))
 (define cdar (lambda (x) (cdr (car x))))
@@ -6649,52 +6687,82 @@ We inject utilities just to illustrate - modularise code later
   (lambda (object list)
     (let ((result ()))
       (while (pair? list)
- (if (= object (car list))
-   (let ()
-     (set result list)
-     (set list ()))
-   (set list (cdr list))))
+	(if (= object (car list))
+	    (let ()
+	      (set result list)
+	      (set list ()))
+	  (set list (cdr list))))
       result)))
 
 (define assq
   (lambda (object list)
     (let ((result ()))
       (while (pair? list)
-             (if (= object (caar list))
-               (let ()
-                 (set result (car list))
-                 (set list ())))
-             (set list (cdr list)))
+	(if (= object (caar list))
+	    (let ()
+	      (set result (car list))
+	      (set list ())))
+	(set list (cdr list)))
       result)))
 
+(define concat-list
+  (lambda (x y)
+    (if (pair? x)
+	(cons (car x) (concat-list (cdr x) y))
+      y)))
+
+(define concat-string
+  (lambda (x y)
+    (let ((a (string-length x))
+	  (b (string-length y)))
+      (let ((s (string (+ a b)))
+	    (i 0)
+	    (j 0))
+	(while (< i a)
+	  (set-string-at s j (string-at x i))
+	  (set i (+ i 1))
+	  (set j (+ j 1)))
+	(set i 0)
+	(while (< i b)
+	  (set-string-at s j (string-at y i))
+	  (set i (+ i 1))
+	  (set j (+ j 1)))
+	s))))
+
+(define concat-strings
+  (lambda args
+    (let ((result (car args)))
+      (while (string? (car (set args (cdr args))))
+	(set result (concat-string result (car args))))
+      result)))
+
+(define concat-symbol
+  (lambda (x y)
+    (string->symbol (concat-string (symbol->string x) (symbol->string y)))))
 
 (define quasiquote
   (form
     (let ((qq-list) (qq-element) (qq-object))
-      (set qq-list
-           (lambda (l)
-             (if (pair? l)
-               (let ((obj (car l)))
-                 (if (and (pair? obj) (= (car obj) 'unquote-splicing))
-                   (if (cdr l)
-                     (list 'concat-list (cadr obj) (qq-list (cdr l)))
-                     (cadr obj))
-                   (list 'cons (qq-object obj) (qq-list (cdr l)))))
-               (list 'quote l))))
-      (set qq-element
-           (lambda (l)
-             (let ((head (car l)))
-               (if (= head 'unquote)
-                 (cadr l)
-                 (qq-list l)))))
-      (set qq-object
-           (lambda (object)
-             (if (pair? object)
-               (qq-element object)
-               (list 'quote object))))
+      (set qq-list (lambda (l)
+		     (if (pair? l)
+			 (let ((obj (car l)))
+			   (if (and (pair? obj) (= (car obj) 'unquote-splicing))
+			       (if (cdr l)
+				   (list 'concat-list (cadr obj) (qq-list (cdr l)))
+				 (cadr obj))
+			     (list 'cons (qq-object obj) (qq-list (cdr l)))))
+		       (list 'quote l))))
+      (set qq-element (lambda (l)
+			(let ((head (car l)))
+			  (if (= head 'unquote)
+			      (cadr l)
+			    (qq-list l)))))
+      (set qq-object (lambda (object)
+		       (if (pair? object)
+			   (qq-element object)
+			 (list 'quote object))))
       (lambda (env expr)
-        (qq-object expr)))))
-
+	(qq-object expr)))))
 
 ; Core language? -------
 
@@ -6728,141 +6796,177 @@ We inject utilities just to illustrate - modularise code later
 ; note the destructuring operators ` and ,
 ; note (car . cdr) and see TODO - ARGUMENTS SHOULD NOT BE CONSed
 
-(define define-form
-  (form
-    (lambda (env name args . body)
-      `(define ,name (form (lambda (*env* ,@args) ,@body))))))
 
-(define-form define-function                        ; name
-             (name args . body)                     ; args
-             `(define ,name (lambda ,args ,@body))) ; body
+(define define-form (form (lambda (env name args . body)
+			    `(define ,name (form (lambda (*env* ,@args) ,@body))))))
+
+(define-form define-function (name args . body)
+  `(define ,name (lambda ,args ,@body)))
 
 (define-form define-macro (name args . body)
-             `(define-form ,name ,args (cons 'let (cons () (macro-expand (list-zip-assocs ',args (list ,@args)) ',body)))))
+  `(define-form ,name ,args (cons 'let (cons () (macro-expand (list-zip-assocs ',args (list ,@args)) ',body)))))
 
 (define-function macro-expand (bindings exp)
-                 (if (pair? exp)
-                   (cons (macro-expand bindings (car exp))
-                         (macro-expand bindings (cdr exp)))
-                   (if (symbol? exp)
-                     (let ((a (assq exp bindings)))
-                       (if a (cdr a) exp))
-                     exp)))
+  (if (pair? exp)
+      (cons (macro-expand bindings (car exp))
+	    (macro-expand bindings (cdr exp)))
+    (if (symbol? exp)
+	(let ((a (assq exp bindings)))
+	  (if a (cdr a) exp))
+      exp)))
 
 (define-form define-constant (name value)
-             `(define ,name (form () (lambda args ',value))))
+  `(define ,name (form () (lambda args ',value))))
 
 
-;; XXX list and array module
-
-;; XXX multimethod?
+;; list and array module - multimethod?
 (define-function list-length (list)
-                 (if (pair? list)
-                   (+ 1 (list-length (cdr list)))
-                   0))
+  (if (pair? list)
+      (let ((len 1))
+	(while (set list (cdr list)) (set len (+ len 1)))
+	len)
+    0))
 
 (define %list->array
   (lambda (list index)
     (if (pair? list)
-      (let ((a (%list->array (cdr list) (+ 1 index))))
-        (set-array-at a index (car list))
-        a)
+	(let ((a (%list->array (cdr list) (+ 1 index))))
+	  (set-array-at a index (car list))
+	  a)
       (array index))))
 
 (define-function list->array (list)
-                 (%list->array list 0))
+  (%list->array list 0))
 
 (define-function array-append (arr val)
-                 (set-array-at arr (array-length arr) val))
+  (set-array-at arr (array-length arr) val))
 
-(define-function map (function list)
-                 ; simpler but not tail recursive - how much slower is it really?
-                 ; we should pull in the femtolisp version or the commented one below
-                 (if (pair? list)
-                   (cons (function (car list)) (map function (cdr list)))
-                   ()))
-; (let ((head (cons)))
-;   (let ((tail head))
-;     (while (pair? list)
-;       (let ((head (car list)))
+(define-function map1 (function list)
+  (let ((head (cons)))
+    (let ((tail head))
+      (while (pair? list)
+	(set tail (set (cdr tail) (cons (function (car list)) ())))
+	(set list (cdr list))))
+    (cdr head)))
 
-;       (set tail (set (cdr tail) (list (function head))))
-;       (set list (cdr list))))
-;   (cdr head))))
+(define-function mapN (function lists)
+  (and (pair? (car lists))
+       (cons (apply function (map1 car lists))
+	     (mapN function (map1 cdr lists)))))
 
-;; XXX varadic?
+(define-function map (function . lists)
+  (if (pair? (cdr lists))
+      (mapN function lists)
+    (map1 function (car lists))))
+
+(define-function reverse-map (function list)
+  (and list
+       (let ((tail (reverse-map function (cdr list))))
+	 (cons (function (car list)) tail))))
+
+(define-function reverse-with-map (function arg list)
+  (and list
+       (let ((tail (reverse-with-map function arg (cdr list))))
+	 (cons (function arg (car list)) tail))))
+
+(define-function reverse-map-with (function list arg)
+  (and list
+       (let ((tail (reverse-map-with function (cdr list) arg)))
+	 (cons (function (car list) arg) tail))))
+
 (define-function map-with (function list a)
-                 (if (pair? list)
-                   (let ((head (function (car list) a)))
-                     (cons head (map-with function (cdr list) a)))))
+  (if (pair? list)
+      (let ((head (function (car list) a)))
+	(cons head (map-with function (cdr list) a)))))
 
 (define-function with-map (function a list)
-                 (if (pair? list)
-                   (let ((head (function a (car list))))
-                     (cons head (with-map function a (cdr list))))))
+  (if (pair? list)
+      (let ((head (function a (car list))))
+	(cons head (with-map function a (cdr list))))))
 
 (define-function map-with2 (function list a b)
-                 (if (pair? list)
-                   (let ((head (function (car list) a b)))
-                     (cons head (map-with2 function (cdr list) a b)))))
+  (if (pair? list)
+      (let ((head (function (car list) a b)))
+	(cons head (map-with2 function (cdr list) a b)))))
 
 (define-function with2-map (function a b list)
-                 (if (pair? list)
-                   (let ((head (function a b (car list))))
-                     (cons head (with2-map function a b (cdr list))))))
+  (if (pair? list)
+      (let ((head (function a b (car list))))
+	(cons head (with2-map function a b (cdr list))))))
 
 (define-function with-map2 (function a alist blist)
-                 (if (pair? alist)
-                   (let ((head (function a (car alist) (car blist))))
-                     (cons head (with-map2 function a (cdr alist) (cdr blist))))))
+  (if (pair? alist)
+      (let ((head (function a (car alist) (car blist))))
+	(cons head (with-map2 function a (cdr alist) (cdr blist))))))
 
 (define-function map2-with (function alist blist a)
-                 (if (pair? alist)
-                   (let ((head (function (car alist) (car blist) a)))
-                     (cons head (map2-with function (cdr alist) (cdr blist) a)))))
+  (if (pair? alist)
+      (let ((head (function (car alist) (car blist) a)))
+	(cons head (map2-with function (cdr alist) (cdr blist) a)))))
 
 (define-function map* (function . lists)
-                 (if (pair? (car lists))
-                   (let ((head (apply function (map car lists))))
-                     (cons head (apply map* (cons function (map cdr lists)))))))
+  (if (pair? (car lists))
+      (let ((head (apply function (map car lists))))
+	(cons head (apply map* (cons function (map cdr lists)))))))
 
 (define-function foldr (op value list)
-                 (if (pair? list)
-                   (op (car list) (foldr op value (cdr list)))
-                   value))
+  (if (pair? list)
+      (op (car list) (foldr op value (cdr list)))
+    value))
 
 ;; https://coderedirect.com/questions/198269/defining-setf-expanders-in-common-lisp
 ;; Also see the TODO expand example and note the define-form comments
-(set *expanders*   (array)) (define-form define-expand (type args . body) `(set-array-at *expanders*   ,type (lambda ,args ,@body)))
-(set *encoders*    (array)) (define-form define-encode (type args . body) `(set-array-at *encoders*    ,type (lambda ,args ,@body)))
-(set *evaluators*  (array)) (define-form define-eval   (type args . body) `(set-array-at *evaluators*  ,type (lambda ,args ,@body)))
-(set *applicators* (array)) (define-form define-apply  (type args . body) `(set-array-at *applicators* ,type (lambda ,args ,@body)))
-
+(set *expanders*   (array))	(define-form define-expand (type args . body)	`(set-array-at *expanders*   ,type (lambda ,args ,@body)))
+(set *encoders*    (array))	(define-form define-encode (type args . body)	`(set-array-at *encoders*    ,type (lambda ,args ,@body)))
+(set *evaluators*  (array))	(define-form define-eval   (type args . body)	`(set-array-at *evaluators*  ,type (lambda ,args ,@body)))
+(set *applicators* (array))	(define-form define-apply  (type args . body)	`(set-array-at *applicators* ,type (lambda ,args ,@body)))
 
 ;;; let*
-;; https://stackoverflow.com/questions/12333590/lisp-local-global-variable-assignment
-;; https://stackoverflow.com/questions/23493877/percent-sign-in-defun-and-defstruct
+
+(define-function %let*getters (vars getter rest)
+  (if (pair? vars)
+      (cons (list (car vars) (list 'car getter))
+	    (%let*getters (cdr vars) (list 'cdr getter) rest))
+    (if (symbol? vars)
+	(cons (list vars getter) rest)
+      rest)))
+
+(define-function %let*unpack (vars val rest)
+    (cons (cons '_%let_values_ val)
+	  (%let*getters vars '_%let_values_ rest)))
+
+(define-function %let*bindings (bindings)
+  (if (pair? bindings)
+      (let ((var     (caar bindings))
+	    (val     (cdar bindings)))
+	(if (pair? var)
+	    (%let*unpack var val (%let*bindings (cdr bindings)))
+	  (cons (cons var val) (%let*bindings (cdr bindings)))))))
+
 (define-function %let* (bindings body)
-                 (if (pair? (cdr bindings))
-                   `(let (,(car bindings)) ,(%let* (cdr bindings) body))
-                   `(let ,bindings ,@body)))
+  (if (pair? (cdr bindings))
+      `(let (,(car bindings)) ,(%let* (cdr bindings) body))
+    `(let ,bindings ,@body)))
 
 (define-form let* bindings-body
-             (%let* (car bindings-body) (cdr bindings-body)))
+  (%let* (%let*bindings (car bindings-body)) (cdr bindings-body)))
 
 ;;; cond
 
 ;; https://riptutorial.com/common-lisp/example/17267/progn eval zero or more forms
-(define-function %progn (prog) (if (cdr prog) (cons 'let (cons '() prog)) (car prog)))
+(define-function %progn (prog)	(if (cdr prog) (cons 'let (cons '() prog)) (car prog)))
 
 (define-function %cond (clauses)
-                 (if (pair? clauses)
-                   (let* ((clause (car clauses))
-                          (test   (car clause))
-                          (value  (cdr clause)))
-                     (if (= 'else test)
-                       (%progn value)
-                       `(if ,test ,(%progn value) ,(%cond (cdr clauses)))))))
+  (if (pair? clauses)
+      (let* ((clause (car clauses))
+	     (test   (car clause))
+	     (value  (cdr clause)))
+	(if (= 'else test)
+	    (%progn value)
+	  (if (= '=> (car value))
+	      `(let ((_ ,test))
+		 (if _ (,(%progn (cdr value)) _) ,(%cond (cdr clauses))))
+	    `(if ,test ,(%progn value) ,(%cond (cdr clauses))))))))
 
 (define-form cond clauses (%cond clauses))
 
@@ -6870,8 +6974,8 @@ We inject utilities just to illustrate - modularise code later
 
 ;;; type information
 
-(define %type-names (array 16))
-(define %last-type  -1)
+(define %type-names	(array 16))
+(define %last-type	-1)
 
 (define %allocate-type
   (lambda (name)
@@ -6879,179 +6983,203 @@ We inject utilities just to illustrate - modularise code later
     (set-array-at %type-names %last-type name)
     %last-type))
 
-(define-function name-of-type (type) (array-at %type-names type))
-(define-function type-name-of (obj) (name-of-type (type-of obj)))
-
+(define-function name-of-type (type)	(array-at %type-names type))
+(define-function type-name-of (obj)	(name-of-type (type-of obj)))
 
 ;;; https://stackoverflow.com/questions/23493877/percent-sign-in-defun-and-defstruct
 ;;; structure
 
-(define %structure-sizes       (array))
-(define %structure-fields      (array))
-(define %structure-bases       (array))
-(define %structure-derivatives (array))
+(define %structure-sizes	(array))
+(define %structure-fields	(array))
+(define %structure-bases	(array))
+(define %structure-derivatives	(array))
 
 (define-function sanity-check-structure-fields (name fields)
-                 (let ((f fields))
-                   (while (pair? f)
-                          (and (memq (car f) (cdr f))
-                               (error "field '"(car f)"' multiply-defined in structure: "name" "fields))
-                          (set f (cdr f)))))
+  (let ((f fields))
+    (while (pair? f)
+      (and (memq (car f) (cdr f))
+	   (error "field '"(car f)"' multiply-defined in structure: "name" "fields))
+      (set f (cdr f)))))
 
 (define-function fields-of-type (type)
-                 (array-at %structure-fields type))
+  (array-at %structure-fields type))
 
 (define-function inherits-from (type base)
-                 (and type
-                      (or (= type base)
-                          (inherits-from (array-at %structure-bases type) base))))
+  (and type
+       (or (= type base)
+	   (inherits-from (array-at %structure-bases type) base))))
 
 (define-function %typecheck (type object)
-                 (or (= type (type-of object))
-                     (inherits-from (type-of object) type)
-                     (error "type check failed for field accessor: expected "type" "(array-at %type-names type)" got "(type-of object)" "(array-at %type-names (type-of object))))
-                 object)
+  (or (= type (type-of object))
+      (inherits-from (type-of object) type)
+      (error "type check failed for field accessor: expected "type" "(array-at %type-names type)" got "(type-of object)" "(array-at %type-names (type-of object))))
+  object)
 
 (define %make-accessor) ;; forward
 
+(define-function %accessor (name)	(if (= ?_ (string-at (symbol->string name) 0)) 'long-at 'oop-at))
+
 (define-function %make-safe-accessor (name fields offset)
-                 (if fields
-                   (cons `(define-form
-                            ,(concat-symbol name (concat-symbol '- (car fields)))
-                            (self)
-                            ; (list 'oop-at self ,offset))
-                            (list 'oop-at (list '%typecheck ',name self) ,offset))
-                         (%make-accessor name (cdr fields) (+ 1 offset)))))
+  (if fields (cons `(define-form ,(concat-symbol name (concat-symbol '- (car fields))) (self)
+		      (list ',(%accessor (car fields))
+			    (list '%typecheck ',name self)
+			    ,offset))
+		   (%make-accessor name (cdr fields) (+ 1 offset)))))
 
 (define-function %make-unsafe-accessor (name fields offset)
-                 (if fields
-                   (cons `(define-form
-                            ,(concat-symbol name (concat-symbol '- (car fields)))
-                            (self)
-                            (list 'oop-at self ,offset))
-                         (%make-accessor name (cdr fields) (+ 1 offset)))))
+  (if fields (cons `(define-form ,(concat-symbol name (concat-symbol '- (car fields))) (self)
+		      (list ',(%accessor (car fields))
+			    self
+			    ,offset))
+		   (%make-accessor name (cdr fields) (+ 1 offset)))))
 
-; (define %make-accessor %make-safe-accessor)
-(define %make-accessor %make-unsafe-accessor)
+(define %make-accessor
+  (if (> (optimised) 0)
+      %make-unsafe-accessor
+    %make-safe-accessor))
 
 (define-function %make-accessors (name fields)
-                 (%make-accessor name fields 0))
+  (%make-accessor name fields 0))
 
 (define-form define-structure (name fields)
-             (let ((type (%allocate-type name))
-                   (size (list-length fields)))
-               (sanity-check-structure-fields name fields)
-               (set-array-at %structure-sizes  type size)
-               (set-array-at %structure-fields type fields)
-               `(let ()
-                  (define ,name ,type)
-                  ,@(%make-accessors name fields)
-                  ,type)))
+  (let ((type (%allocate-type name))
+	(size (list-length fields)))
+    (sanity-check-structure-fields name fields)
+    (set-array-at %structure-sizes  type size)
+    (set-array-at %structure-fields type fields)
+    `(let ()
+       (define ,name ,type)
+       ,@(%make-accessors name fields)
+       ,type)))
 
 (define-form new (type . inits)
-             (let ((i -1))
-               `(let* ((_type_ ,type)
-                       (_self_ (allocate _type_ (array-at %structure-sizes _type_))))
-                  ,@(map (lambda (_init_) (list 'set-oop-at '_self_ (set i (+ i 1)) _init_)) inits)
-                  _self_)))
+  (let ((i -1))
+    `(let* ((_type_ ,type)
+	    (_self_ (allocate _type_ (array-at %structure-sizes _type_))))
+       ,@(map (lambda (_init_) (list 'set-oop-at '_self_ (set i (+ i 1)) _init_)) inits)
+       _self_)))
+
+(define-function %make-make-inits (prefix inits)
+  (and inits
+       (cons (list 'set (list (concat-symbol prefix (caar inits)) 'self) (cadar inits))
+	     (%make-make-inits prefix (cdr inits)))))
+
+(define-form make (type . inits)
+  `(let ((self (new ,type)))
+     (with-instance-accessors ,type
+       ,@(%make-make-inits (concat-symbol type '-) inits)
+       self)))
 
 ;; See parser.l for example of class def and instantiation
 (define-form define-class (name basis fields)
-             (let ((base (eval basis)))
-               (set fields (concat-list (array-at %structure-fields base) fields))
-               (sanity-check-structure-fields name fields)
-               (let ((type   (%allocate-type name))
-                     (size   (list-length fields)))
-                 (set-array-at %structure-sizes  type size)
-                 (set-array-at %structure-fields type fields)
-                 (set-array-at %structure-bases  type base)
-                 (let ((derived (or (array-at %structure-derivatives base)
-                                    (set-array-at %structure-derivatives base (array)))))
-                   (array-append derived type))
-
-                 `(let ()
-                    (define ,name ,type)
-                    ,@(%make-accessors name fields)
-                    ,type))))
-
+  (let ((base (eval basis)))
+    (set fields (concat-list (array-at %structure-fields base) fields))
+    (sanity-check-structure-fields name fields)
+    (let ((type   (%allocate-type name))
+;	  (offset (list-length (array-at %structure-fields base)))
+	  (size   (list-length fields)))
+      (set-array-at %structure-sizes  type size)
+      (set-array-at %structure-fields type fields)
+      (set-array-at %structure-bases  type base)
+      (let ((derived (or (array-at %structure-derivatives base)
+			 (set-array-at %structure-derivatives base (array)))))
+	(array-append derived type))
+      `(let ()
+	 (define ,name ,type)
+	 ,@(%make-accessors name fields)
+	 ,type))))
 
 ;;; https://stackoverflow.com/questions/31870656/what-does-the-underscore-mean-in-elisp
 ;;; built-in types
 
-(define-structure <undefined> ())
-(define-structure <data> ())
-(define-structure <long> (_bits))    (define-function long? (self) (= <long> (type-of self)))
-(define-structure <double> (_bits))    (define-function double? (self) (= <double> (type-of self)))
-(define-structure <string> (size _bits))
-(define-structure <symbol> (_bits))
-(define-structure <pair> (head tail source))
-(define-structure <_array> ())
-(define-structure <array> (size _array))
-(define-structure <expr> (name defunc ctx profile))  (define-function expr? (obj) (= <expr> (type-of obj)))
-(define-structure <form> (function symbol))
-(define-structure <fixed> (function))
-(define-structure <subr> (_imp _name _profile))
-(define-structure <variable> (name value env index))   (define-function variable? (obj) (= <variable> (type-of obj)))
-(define-structure <env>  (parent level offset bindings stable))
-(define-structure <context> (home env bindings callee pc))
+(define-structure <undefined>	())
+(define-structure <data>	())
+(define-structure <long>	(_bits))				(define-function long? (self) (= <long> (type-of self)))
+(define-structure <double>	(_bits))				(define-function double? (self) (= <double> (type-of self)))
+(define-structure <string>	(size _bits))
+(define-structure <symbol>	(_bits))
+(define-structure <pair>	(head tail source))
+(define-structure <_array>	())
+(define-structure <array>	(size _array))
+(define-structure <expr>	(name defn ctx profile))		(define-function expr? (obj) (= <expr> (type-of obj)))
+(define-structure <form>	(function symbol))
+(define-structure <fixed>	(function))
+(define-structure <subr>	(_imp _name _profile))
+(define-structure <variable>	(name value env index type))		(define-function variable? (obj) (= <variable> (type-of obj)))
+(define-structure <env>		(parent level offset bindings stable))
+(define-structure <context>	(home env bindings callee pc))
 
 (define-function fixed (fun)
-                 (let ((self (new <fixed>)))
-                   (set (<fixed>-function self) fun)
-                   self))
+  (let ((self (new <fixed>)))
+    (set (<fixed>-function self) fun)
+    self))
 
-(define-function variable (name value env index)
-                 (let ((self (new <variable>)))
-                   (set (<variable>-name  self) name)
-                   (set (<variable>-value self) value)
-                   (set (<variable>-env   self) env)
-                   (set (<variable>-index self) index)
-                   self))
+(define-function variable (name value env index . opt-type)
+  (let ((self (new <variable>)))
+    (set (<variable>-name  self) name)
+    (set (<variable>-value self) value)
+    (set (<variable>-env   self) env)
+    (set (<variable>-index self) index)
+    (set (<variable>-type  self) (car opt-type))
+    self))
 
 (define-function environment (parent)
-                 (let ((self (new <env>)))
-                   (set (<env>-parent   self) parent)
-                   (set (<env>-level    self) (<env>-level  parent))
-                   (set (<env>-offset   self) (<env>-offset parent))
-                   (set (<env>-bindings self) (array))
-                   self))
+  (let ((self (new <env>)))
+    (set (<env>-parent 	 self) parent)
+    (set (<env>-level  	 self) (<env>-level  parent))
+    (set (<env>-offset 	 self) (<env>-offset parent))
+    (set (<env>-bindings self) (array))
+    self))
 
 (define-function environment-define (env name value)
-                 (let ((bindings (<env>-bindings env))
-                       (offset   (<env>-offset   env))
-                       (var      (variable name value env offset)))
-                   (set (<env>-offset env) (+ offset 1))
-                   (array-append bindings var)))
+  (let* ((bindings (<env>-bindings env))
+	 (offset   (<env>-offset   env))
+	 (var      (variable name value env offset)))
+    (set (<env>-offset env) (+ offset 1))
+    (array-append bindings var)))
+
+(define-function environment-find (env name)
+  (let* ((bindings (<env>-bindings env))
+	 (offset   (<env>-offset   env))
+	 (var      ())
+	 (idx      0))
+    (while (and (not var) (< idx offset))
+      (if (= name (<variable>-name (array-at bindings idx)))
+	  (set var (array-at bindings idx))
+	(set idx (+ idx 1))))
+    var))
+
+(define-function global? (var)	(= 0 (<env>-level (<variable>-env var))))
 
 ;;; local syntax
 
 (define-function make-with-form (args-body)
-                 (and args-body `(lambda (*env* ,@(car args-body)) ,@(cdr args-body))))
+  (and args-body `(lambda (*env* ,@(car args-body)) ,@(cdr args-body))))
 
 (define-form with-forms (bindings . body)
-             (let ((env (environment *env*)))
-               (while bindings
-                      (let* ((binding (car   bindings))
-                             (name    (car   binding))
-                             (fun     (cadr  binding))
-                             (var     (caddr binding))
-                             (exp     (list 'form (make-with-form fun) (make-with-form var))))
-                        (environment-define env (caar bindings) (eval exp *env*))
-                        (set bindings (cdr bindings))))
-               (cons 'let (cons () (map-with expand body env)))))
+  (let ((env (environment *env*)))
+    (while bindings
+      (let* ((binding (car   bindings))
+	     (name    (car   binding))
+	     (fun     (cadr  binding))
+	     (var     (caddr binding))
+	     (exp     (list 'form (make-with-form fun) (make-with-form var))))
+	(environment-define env (caar bindings) (eval exp *env*))
+	(set bindings (cdr bindings))))
+    (cons 'let (cons () (map-with expand body env)))))
 
-;;; field accessors
+;;; field accesors
 
 (define-function make-instance-accessors (name fields i)
-                 (and (pair? fields)
-                      (cons `(,(concat-symbol 'self. (car fields)) () ((name) (list 'oop-at 'self ,i)))
-                            (make-instance-accessors name (cdr fields) (+ i 1)))))
+  (and (pair? fields)
+       (cons `(,(concat-symbol 'self. (car fields)) () ((name) (list 'oop-at 'self ,i)))
+	     (make-instance-accessors name (cdr fields) (+ i 1)))))
 
 (define-form with-instance-accessors (type . body)
-             `(with-forms ,(make-instance-accessors type (array-at %structure-fields (eval type)) 0)
-                          (let () ,@body)))
+  `(with-forms ,(make-instance-accessors type (array-at %structure-fields (eval type)) 0)
+    (let () ,@body)))
 
-;;; selectors
+;;; selector
 ;; eg. do-print has type selectors
 
 (define-structure <selector> (name methods default))
@@ -7059,59 +7187,54 @@ We inject utilities just to illustrate - modularise code later
 (define-function selector? (obj) (= <selector> (type-of obj)))
 
 (define-function <selector>-inherit (methods type)
-                 (let ((method ()))
-                   (while (and (set type (array-at %structure-bases type))
-                               (not (set method (array-at methods type)))))
-                   method)) ;; xxx THIS SHOULD COPY DOWN THE METHOD FOR PERFORMANCE xxx
+  (let ((method ())
+	(probe  type))
+    (while (and (set probe (array-at %structure-bases probe))
+		(not (set method (array-at methods probe)))))
+    ;; (and method (set (array-at methods type) method))	;; copy down the method for performance
+    method))
 
 (define-apply <selector> (self . arguments)
-              (apply (or (array-at (<selector>-methods self) (type-of (car arguments)))
-                         (<selector>-inherit (<selector>-methods self) (type-of (car arguments)))
-                         (<selector>-default self))
-                     arguments))
+  (apply (or (array-at (<selector>-methods self) (type-of (car arguments)))
+	     (<selector>-inherit (<selector>-methods self) (type-of (car arguments)))
+	     (<selector>-default self))
+	 arguments))
 
 (define-function selector (name default)
-                 (let ((self (new <selector>)))
-                   (set (<selector>-name    self) name)
-                   (set (<selector>-methods self) (array))
-                   (set (<selector>-default self) default)
-                   self))
+  (let ((self (new <selector>)))
+    (set (<selector>-name    self) name)
+    (set (<selector>-methods self) (array))
+    (set (<selector>-default self) default)
+    self))
 
 (define-function <selector>-add-method (self type method)
-                 (and (expr? method)
-                      (or (<expr>-name method)
-                          (set (<expr>-name method)
-                               (concat-symbol (array-at %type-names type) (concat-symbol '. (<selector>-name self))))))
-                 (set-array-at (<selector>-methods self) type method))
+  (and (expr? method)
+       (or (<expr>-name method)
+	   (set (<expr>-name method)
+		(concat-symbol (array-at %type-names type) (concat-symbol '. (<selector>-name self))))))
+  (set-array-at (<selector>-methods self) type method))
 
 (define-form define-selector (name . default)
-             (let ((def (defined? name)))
-               (if def
-                 (if (selector? (<variable>-value def))
-                   (list 'quote <variable>-value def)
-                   (error name" already defined as non-selector: " (<variable>-value def)))
-                 (let ()
-                   (or default
-                       (set default
-                            `(args (error "selector "',name
-                                          " has no method for "(array-at %type-names (type-of (car args)))
-                                          ": "(cons (car args) (map name-of-type (map type-of (cdr args))))))))
-                   `(define ,name (selector ',name (lambda ,@default)))))))
-
-
+  (let ((def (defined? name)))
+    (if def
+	(if (selector? (<variable>-value def))
+	    (list 'quote <variable>-value def)
+	  (error name" already defined as non-selector: " (<variable>-value def)))
+      (let ()
+	(or default (set default `(args (error "selector "',name
+					       " has no method for "(array-at %type-names (type-of (car args)))
+					       ": "(cons (car args) (map name-of-type (map type-of (cdr args))))))))
+	`(define ,name (selector ',name (lambda ,@default)))))))
 
 (define-selector add-method)
 
 (<selector>-add-method add-method <selector>
-                       (lambda (self type args body)
-                         (<selector>-add-method self type (eval `(lambda ,args (with-instance-accessors ,type ,@body))))))
+  (lambda (self type args body)
+    (<selector>-add-method self type (eval `(lambda ,args (with-instance-accessors ,type ,@body))))))
 
 (define-form define-method (selector type args . body)
-             `(print self)
-             (or (defined? selector) (eval (list 'define-selector selector)))
-             `(add-method ,selector ,type ',(cons 'self args) ',body))
-
-
+  (or (defined? selector) (eval (list 'define-selector selector)))
+  `(add-method ,selector ,type ',(cons 'self args) ',body))
 
 ;;; print
 
@@ -7121,15 +7244,15 @@ We inject utilities just to illustrate - modularise code later
 (define print
   (lambda args
     (while (pair? args)
-           (do-print (car args))
-           (set   args (cdr args)))
+      (do-print (car args))
+      (set args (cdr args)))
     (car args)))
 
 (define dump
   (lambda args
     (while (pair? args)
-           (do-dump (car args))
-           (set args (cdr args)))
+      (do-dump (car args))
+      (set args (cdr args)))
     (car args)))
 
 (define println
@@ -7144,321 +7267,393 @@ We inject utilities just to illustrate - modularise code later
     (%print "\n")
     (car args)))
 
-(define-method do-dump  <string> () (%dump self))
-(define-method do-dump  <array> () (%dump self))
-(define-method do-print <selector> () (print "<selector "(<selector>-name self)">"))
+(define-method do-dump  <string> ()	(%dump self))
+(define-method do-dump  <array> ()	(%dump self))
+(define-method do-print <selector> ()	(print "<selector "(<selector>-name self)">"))
 
 (define-method do-print <pair> ()
-               (if (= *globals* (cdr self))
-                 (print "*globals*")
-                 (let ()
-                   (print "(")
-                   (while self
-                          (if (pair? self)
-                            (print (car self))
-                            (let ()
-                              (print ". ")
-                              (print self)))
-                          (if (set self (cdr self))
-                            (print " ")))
-                   (print ")"))))
+  (if (= *globals* (cdr self))
+      (print "*globals*")
+    (let ()
+      (print "(")
+      (while self
+	(if (pair? self)
+	    (print (car self))
+	  (let ()
+	    (print ". ")
+	    (print self)))
+	(if (set self (cdr self))
+	    (print " ")))
+      (print ")"))))
 
 (define-method do-dump <pair> ()
-               (if (= *globals* (cdr self))
-                 (print "*globals*")
-                 (let ()
-                   (print "(")
-                   (while self
-                          (if (pair? self)
-                            (dump (car self))
-                            (let ()
-                              (print ". ")
-                              (print self)))
-                          (if (set self (cdr self))
-                            (print " ")))
-                   (print ")"))))
+  (if (= *globals* (cdr self))
+      (print "*globals*")
+    (let ()
+      (print "(")
+      (while self
+	(if (pair? self)
+	    (dump (car self))
+	  (let ()
+	    (print ". ")
+	    (print self)))
+	(if (set self (cdr self))
+	    (print " ")))
+      (print ")"))))
 
 (define-function dump-until (target arg)
-                 (let ((found (= target arg)))
-                   (if (pair? arg)
-                     (let ()
-                       (print "(")
-                       (while arg
-                              (if (pair? arg)
-                                (if (dump-until target (car arg))
-                                  (let ()
-                                    (if (cdr arg) (print " ..."))
-                                    (set found 't)
-                                    (set arg ())))
-                                (let ()
-                                  (print ". ")
-                                  (dump-until target arg)))
-                              (if (set arg (cdr arg))
-                                (print " ")))
-                       (print ")"))
-                     (dump arg))
-                   found))
+  (let ((found (= target arg)))
+    (if (pair? arg)
+	(let ()
+	  (print "(")
+	  (while arg
+	    (if (pair? arg)
+		(if (dump-until target (car arg))
+		    (let ()
+		      (if (cdr arg) (print " ..."))
+		      (set found 't)
+		      (set arg ())))
+	      (let ()
+		(print ". ")
+		(dump-until target arg)))
+	    (if (set arg (cdr arg))
+		(print " ")))
+	  (print ")"))
+      (dump arg))
+    found))
 
 (if '()
-  (set *backtrace*
-       (lambda (stack depth)
-         (println "\n")
-         (let ((posn (array)))
-           (while (>= (set depth (- depth 1)) 0)
-                  (let ((here (array-at stack depth)))
-                    (print "  " depth "\t")
-                    (dump-until posn here)
-                    (print "\n")
-                    (set posn here))))
-         (exit 1)))
+    (set *backtrace*
+	 (lambda (stack depth)
+	   (println "\n")
+	   (let ((posn (array)))
+	     (while (>= (set depth (- depth 1)) 0)
+	       (let ((here (array-at stack depth)))
+		 (print "  " depth "\t")
+		 (dump-until posn here)
+		 (print "\n")
+		 (set posn here))))
+	   (exit 1)))
   ;;(println "; backtrace disabled")
   )
 
 ;;; multimethod
 
-; The <generic> structure holds the implementation
-; of multimethods.
 (define-structure <generic> (name methods default))
 
 (define-function generic (name default)
-                 (let ((self (new <generic>)))
-                   (set (<generic>-name    self) name)
-                   (set (<generic>-methods self) (array))
-                   (set (<generic>-default self) default)
-                   self))
+  (let ((self (new <generic>)))
+    (set (<generic>-name    self) name)
+    (set (<generic>-methods self) (array))
+    (set (<generic>-default self) default)
+    self))
 
 (define-method do-print <generic> () (print "<multimethod:" (<generic>-name self) ">"))
 
 (define-form define-generic (name . default)
-             (or default (set default `(args (error "no method in "',name" corresponding to: "args))))
-             `(define ,name (generic ',name (lambda ,@default))))
-
+  (or default (set default `(args (error "no method in "',name" corresponding to: "args))))
+  `(define ,name (generic ',name (lambda ,@default))))
 
 ; Create nested arrays - 1 per arg type.
 ; The index is the type value (long)
 (define-function %add-multimethod (mm types method)
-                 (or (<expr>-name method) (set (<expr>-name method) (<generic>-name mm)))
-                 (if types
+  (or (<expr>-name method) (set (<expr>-name method) (<generic>-name mm)))
+  (if types
+      (let ((methods (or (<generic>-methods mm)
+			 (set (<generic>-methods mm) (array 32)))))
+	(while (cdr types)
+	  (let ((type (eval (car types))))
+	    (set methods (or (array-at methods type)
+			     (set (array-at methods type) (array 32)))))
+	  (set types (cdr types)))
+	(set (array-at methods (eval (car types))) method))
 
-                   (let ((methods (or (<generic>-methods mm)
-                                      (set (<generic>-methods mm) (array 32)))))
-                     (while (cdr types)
-                            (let ((type (eval (car types))))
-                              (set methods (or (array-at methods type)
-                                               (set (array-at methods type) (array 32)))))
-                            (set types (cdr types)))
-                     (set (array-at methods (eval (car types))) method))
-
-                   ; else - no types, overwrite all dispatchers with a single method
-                   ; XXX error out here?
-                   (set (<generic>-methods mm) method)))
+    ; else - no types, overwrite all dispatchers with a single method
+    ; XXX error out here?
+    (set (<generic>-methods mm) method)))
 
 ; Define a new multi-method impl
 ; typed-args is a list of pairs ((type, name)...)
 (define-form define-multimethod (method typed-args . body)
-             (let ((args  (map cadr typed-args))
-                   (types (map car  typed-args)))
-               `(%add-multimethod ,method (list ,@types) (lambda ,args ,@body))))
+  (let ((args  (map cadr typed-args))
+	(types (map car  typed-args)))
+    (or (defined? method) (eval (list 'define-generic method)))
+    `(%add-multimethod ,method (list ,@types) (lambda ,args ,@body))))
 
 ; Make the <generic> structure an applicative
 (define-apply <generic> (self . arguments)
-              (let ((method (<generic>-methods self))
-                    (arg     arguments))
-
-                (while arg
-                       (set method (array-at method (type-of (car arg))))
-                       (set arg (cdr arg)))
-
-                (if (and method (not (array? method)))
-                  (apply method arguments)
-
-                  (let ((default (<generic>-default self)))
-                    (if default
-                      (apply default arguments)
-                      (error "no method in "(<generic>-name self)" corresponding to "arguments))))))
+  (let ((method (<generic>-methods self))
+	(arg     arguments))
+    (while arg
+      (set method (array-at method (type-of (car arg))))
+      (set arg (cdr arg)))
+    (if (and method (not (array? method)))
+	(apply method arguments)
+      (let ((default (<generic>-default self)))
+	(if default
+	    (apply default arguments)
+	  (error "no method in "(<generic>-name self)" corresponding to "arguments))))))
 
 ;;; list
 
 (define-form push (list element)
-             `(set ,list (cons ,element ,list)))
+  `(set ,list (cons ,element ,list)))
 
 (define-form pop (list)
-             `(let* ((_list_ ,list) (_head_ (car _list_)))
-                (set ,list (cdr _list_))
-                _head_))
+  `(let* ((_list_ ,list) (_head_ (car _list_)))
+     (set ,list (cdr _list_))
+     _head_))
 
 (define-function member? (key list)
-                 (while (and (pair? list) (!= key (car list)))
-                        (set list (cdr list)))
-                 (car list))
+  (while (and (pair? list) (!= key (car list)))
+    (set list (cdr list)))
+  (car list))
 
-(define-function list-zip (a b)
-                 (if (and (pair? a) (pair? b))
-                   (cons (car a) (cons (car b) (list-zip (cdr a) (cdr b))))
-                   (or a b)))
+(define-function list-reverse! (head)
+  (let ((curr head)
+	(prev ())
+	(next ()))
+    (while curr
+      (set next (cdr curr))
+      (set-cdr curr prev)
+      (set prev curr)
+      (set curr next))
+    prev))
+
+(define-function list-zip lists		(apply map list lists))
 
 (define-function list-zip-assocs (a b)
-                 (if (and (pair? a) (pair? b))
-                   (cons (cons (car a) (car b)) (list-zip-assocs (cdr a) (cdr b)))
-                   (or a b)))
+  (if (and (pair? a) (pair? b))
+      (cons (cons (car a) (car b)) (list-zip-assocs (cdr a) (cdr b)))
+    (or a b)))
 
 ;;; iteration
 
 (define-form for (var-init-limit-step . body)
-             (let ((var       (car    var-init-limit-step)    )
-                   (init      (cadr   var-init-limit-step)    )
-                   (limit     (caddr  var-init-limit-step)    )
-                   (step  (or (cadddr var-init-limit-step) 1)))
-               `(let ((,var ,init) (_limit_ ,limit))
-                  (while (< ,var _limit_)
-                         ,@body
-                         (set ,var (+ ,var ,step))))))
+  (let ((var   	   (car    var-init-limit-step)	   )
+	(init  	   (cadr   var-init-limit-step)	   )
+	(limit 	   (caddr  var-init-limit-step)	   )
+	(step  (or (cadddr var-init-limit-step) 1)))
+    `(let ((,var ,init) (_limit_ ,limit))
+       (while (< ,var _limit_)
+	 ,@body
+	 (set ,var (+ ,var ,step))))))
 
 (define-form list-do (var list . body)
-             `(let ((_list_ ,list))
-                (while _list_
-                       (let ((,var (car _list_))) ,@body)
-                       (set _list_ (cdr _list_)))))
+  `(let ((_list_ ,list))
+     (while _list_
+       (let* ((,var (car _list_))) ,@body)	;; let* allows (list-do (vars...) list-of-lists)
+       (set _list_ (cdr _list_)))))
+
+(define-form alist-do (var alist . body)
+  `(let ((_list_ ,alist))
+     (while _list_
+       (let*  ((,var (cdar _list_))) ,@body)
+       (set _list_ (cdr _list_)))))
 
 (define-function %generic-do (get len var col body)
-                 `(let* ((_col_ ,col)
-                         (_idx_ 0)
-                         (_end_ (,len _col_)))
-                    (while (< _idx_ _end_)
-                           (let ((,var (,get _col_ _idx_))) ,@body)
-                           (set _idx_ (+ _idx_ 1)))))
+  `(let* ((_col_ ,col)
+	  (_idx_ 0)
+	  (_end_ (,len _col_)))
+     (while (< _idx_ _end_)
+       (let* ((,var (,get _col_ _idx_))) ,@body)
+       (set _idx_ (+ _idx_ 1)))))
 
-(define-form array-do (var arr . body) (%generic-do array-at array-length var arr body))
+(define-form array-do (var arr . body)	(%generic-do array-at array-length var arr body))
 
-(define-form string-do (var str . body) (%generic-do string-at string-length var str body))
+(define-form string-do (var str . body)	(%generic-do string-at string-length var str body))
 
-(define-method for-each <pair>   (function) (list-do   _elt_ self (function _elt_)))
-(define-method for-each <array>  (function) (array-do  _elt_ self (function _elt_)))
-(define-method for-each <string> (function) (string-do _elt_ self (function _elt_)))
+(define-method for-each <pair>   (function)	(list-do   _elt_ self (function _elt_)))
+(define-method for-each <array>  (function)	(array-do  _elt_ self (function _elt_)))
+(define-method for-each <string> (function)	(string-do _elt_ self (function _elt_)))
 
 (define-function for-each-with (collection function value)
-                 (for-each collection (lambda (x) (function x value))))
+  (for-each collection (lambda (x) (function x value))))
 
-(define-form incr (lval . options) `(set ,lval (+ ,lval ,(or (car options) 1))))
+(define-form incr (lval . options)	`(set ,lval (+ ,lval ,(or (car options) 1))))
+(define-form decr (lval . options)	`(set ,lval (- ,lval ,(or (car options) 1))))
+
+(define-form until (condition . body)
+  `(while (not ,condition) ,@body))
+
+(define-form list-detect (name list expr)
+  `(let ((_ ())
+	 (__ ,list))
+     (while (and __ (not _))
+       (let ((,name (car __)))
+	 (and ,expr (set _ ,name))
+	 (set __ (cdr __))))
+     _))
+
+(define-form array-detect (name arr expr)
+  `(let* ((_ ())
+	  (_a ,arr)
+	  (_l (array-length _a)))
+     (for (_i 0 _l)
+       (let ((,name (array-at _a _i)))
+	 (and ,expr (let () (set _ ,name) (set _i _l)))))
+     _))
+
+(define-form when (test . body)		`(and ,test (let () ,@body)))
+(define-form unless (test . body)	`(or  ,test (let () ,@body)))
+
+(define-function %loop-inits (bindings)
+  (and bindings
+       (cons (list (caar bindings) (cadar bindings))
+	     (%loop-inits (cdr bindings)))))
+
+(define-function %loop-steps (bindings)
+  (and bindings
+       (cons (list 'set (caar bindings) (caddar bindings))
+	     (%loop-steps (cdr bindings)))))
+
+(define-form loop (bindings test . body)
+  `(let ,(%loop-inits bindings)
+     (while ,test
+       ,@body
+       ,@(%loop-steps bindings))))
 
 ;;; conversion
 
 (define-function string->number-base (str radix)
-                 (let ((n 0)
-                       (i 0)
-                       (l (string-length str))
-                       (s 1))
-                   (while (and (< i l) (= ?- (string-at str i)))
-                          (set s (- s))
-                          (set i (+ i 1)))
-                   (while (< i l)
-                          (let* ((c (string-at str i))
-                                 (d (cond
-                                      ((and (<= ?0 c) (<= c ?9))       (- c ?0) )
-                                      ((and (<= ?A c) (<= c ?Z)) (+ 10 (- c ?A)))
-                                      ((and (<= ?a c) (<= c ?z)) (+ 10 (- c ?a)))
-                                      (else          radix    ))))
-                            (if (< d radix)
-                              (let ()
-                                (set n (+ (* radix n) d))
-                                (set i (+ i 1)))
-                              (set l i))))
-                   (* s n)))
+  (let ((n 0)
+	(i 0)
+	(l (string-length str))
+	(s 1))
+    (while (and (< i l) (= ?- (string-at str i)))
+      (set s (- s))
+      (set i (+ i 1)))
+    (while (< i l)
+      (let* ((c (string-at str i))
+	     (d (cond
+		  ((and (<= ?0 c) (<= c ?9))	      (- c ?0) )
+		  ((and (<= ?A c) (<= c ?Z))	(+ 10 (- c ?A)))
+		  ((and (<= ?a c) (<= c ?z))	(+ 10 (- c ?a)))
+		  (else				      radix    ))))
+	(if (< d radix)
+	    (let ()
+	      (set n (+ (* radix n) d))
+	      (set i (+ i 1)))
+	  (set l i))))
+    (* s n)))
 
 (define-function string->number (str)
-                 (string->number-base str 10))
+  (string->number-base str 10))
 
 (define-function array->string (arr)
-                 (let* ((ind 0)
-                        (lim (array-length arr))
-                        (str (string lim)))
-                   (while (< ind lim)
-                          (set-string-at str ind (array-at arr ind))
-                          (set ind (+ 1 ind)))
-                   str))
+  (let* ((ind 0)
+	 (lim (array-length arr))
+	 (str (string lim)))
+    (while (< ind lim)
+      (set-string-at str ind (array-at arr ind))
+      (set ind (+ 1 ind)))
+    str))
 
 (define-function array->list (arr)
-                 (let* ((ind (array-length arr))
-                        (lst ()))
-                   (while (<= 0 (set ind (- ind 1)))
-                          (set lst (cons (array-at arr ind) lst)))
-                   lst))
+  (let* ((ind (array-length arr))
+	 (lst ()))
+    (while (<= 0 (set ind (- ind 1)))
+      (set lst (cons (array-at arr ind) lst)))
+    lst))
 
 (define-function list->string (list)
-                 (let* ((len (list-length list))
-                        (str (string len))
-                        (idx 0))
-                   (while (< idx len)
-                          (set-string-at str idx (car list))
-                          (set idx (+ idx 1))
-                          (set list (cdr list)))
-                   str))
+  (let* ((len (list-length list))
+	 (str (string len))
+	 (idx 0))
+    (while (< idx len)
+      (set-string-at str idx (car list))
+      (set idx (+ idx 1))
+      (set list (cdr list)))
+    str))
+
+(define-function character->string (c)
+  (let ((s (string 1)))
+    (set-string-at s 0 c) s))
+
+(define-function array-append-all (a s)
+  (string-do e s (array-append a e))
+  s)
 
 ;;; sorting and searching
 
 (define-function %partition (items at set-at compare left pivot right)
-                 (let ((index left)
-                       (value (at items pivot)))
-                   (set-at items pivot (at items right))
-                   (set-at items right value)
-                   (for (i left right)
-                        (and (compare (at items i) value)
-                             (let ((item (at items i)))
-                               (set-at items i (at items index))
-                               (set-at items index item)
-                               (set index (+ index 1)))))
-                   (set value (at items index))
-                   (set-at items index (at items right))
-                   (set-at items right value)
-                   index))
+  (let ((index left)
+	(value (at items pivot)))
+    (set-at items pivot (at items right))
+    (set-at items right value)
+    (for (i left right)
+      (and (compare (at items i) value)
+	   (let ((item (at items i)))
+	     (set-at items i (at items index))
+	     (set-at items index item)
+	     (set index (+ index 1)))))
+    (set value (at items index))
+    (set-at items index (at items right))
+    (set-at items right value)
+    index))
 
 (define-function %sort (items at set-at compare left right)
-                 (and (< left right)
-                      (let* ((pivot (/ (+ left right) 2))
-                             (index (%partition items at set-at compare left pivot right)))
-                        (%sort items at set-at compare left (- index 1))
-                        (%sort items at set-at compare (+ index 1) right))))
+  (and (< left right)
+       (let* ((pivot (/ (+ left right) 2))
+	      (index (%partition items at set-at compare left pivot right)))
+	 (%sort items at set-at compare left (- index 1))
+	 (%sort items at set-at compare (+ index 1) right))))
 
 (define-function array-sort (items . options)
-                 (%sort items array-at set-array-at (or (car options) <) 0 (- (array-length items) 1))
-                 items)
+  (%sort items array-at set-array-at (or (car options) <) 0 (- (array-length items) 1))
+  items)
 
 (define-function string-sort (items . options)
-                 (%sort items string-at set-string-at (or (car options) <) 0 (- (string-length items) 1))
-                 items)
+  (%sort items string-at set-string-at (or (car options) <) 0 (- (string-length items) 1))
+  items)
 
 (define-function %search (items length at obj compare)
-                 (let ((lo 0)
-                       (hi (- (length items) 1))
-                       (ix ()))
-                   (while (<= lo hi)
-                          (let* ((m (/ (+ lo hi) 2))
-                                 (s (at items m))
-                                 (c (compare obj s)))
-                            (cond
-                              ((< c 0) (set hi (- m 1)))
-                              ((> c 0) (set lo (+ m 1)))
-                              (else  (let () (set ix m) (set lo (+ hi 1)))))))
-                   ix))
+  (let ((lo 0)
+	(hi (- (length items) 1))
+	(ix ()))
+    (while (<= lo hi)
+      (let* ((m (/ (+ lo hi) 2))
+	     (s (at items m))
+	     (c (compare obj s)))
+	(cond
+	  ((< c 0)	(set hi (- m 1)))
+	  ((> c 0)	(set lo (+ m 1)))
+	  (else		(let () (set ix m) (set lo (+ hi 1)))))))
+    ix))
 
-(define-function array-search  (arr obj . options) (%search arr array-length  array-at  obj (or (car options) -)))
-(define-function string-search (str obj . options) (%search str string-length string-at obj (or (car options) -)))
+(define-function array-search  (arr obj . options)	(%search arr array-length  array-at  obj (or (car options) -)))
+(define-function string-search (str obj . options)	(%search str string-length string-at obj (or (car options) -)))
 
-(define-function max (a b) (if (> a b) a b))
-(define-function min (a b) (if (< a b) a b))
+(define-function max (a . rest)	(list-do b rest (set a (if (> b a) b a))) a)
+(define-function min (a . rest)	(list-do b rest (set a (if (< b a) b a))) a)
+(define-function sum (a . rest)	(list-do b rest (incr a b)) a)
 
 ;;; structural equality
 
 (define equal ()) ;; forward
-(define-function equal-lists (a b)
-                 (and (equal (car a) (car b))
-                      (equal (cdr a) (cdr b))))
-(set equal (lambda (a b)
-             (or (= a b)
-                 (and (pair? a)
-                      (pair? b)
-                      (equal-lists a b)))))
 
+(define-function equal-lists (a b)
+  (and (equal (car a) (car b))
+       (equal (cdr a) (cdr b))))
+
+(set equal (lambda (a b)
+  (or (= a b)
+      (and (pair? a)
+	   (pair? b)
+	   (equal-lists a b)))))
+
+;;; unit testing
+
+(define-form unit-fail (expr)
+  `(error "UNIT FAIL "unit-name": "',expr))
+
+(define-form unit-assert (expr)
+  `(or ,expr (unit-fail ,expr)))
+
+(define-form unit-test (name . body)
+  (and unit-testing?
+       `(let ((unit-name ,name))
+	  ,@body)))
 
 ;;; namespace
 ;; https://coderedirect.com/questions/198269/defining-setf-expanders-in-common-lisp
@@ -7475,14 +7670,12 @@ We inject utilities just to illustrate - modularise code later
 ;; Blaeser_ETH_Diss_2007.pdf A component encapsulates state (data values and components),
 ;; as well as behaviour (interactions and functionality). Component Templates.
 
+
 (define *global* *globals*)
 
-(define-form define-namespace (name parent)
-             `(define ,name (environment ,parent)))
+(define-form define-namespace (name parent)	`(define ,name (environment ,parent)))
 
-(define-form namespace (name)
-             `(set *globals* ,name))
-
+(define-form namespace (name)			`(set *globals* ,name))
 
 ;;; command line
 
@@ -7495,32 +7688,56 @@ We inject utilities just to illustrate - modularise code later
 
 (define-form next-argument () '(pop *arguments*))
 
-
 ;;; load/save
-;; XXX TODO decouple IO from the reader
 
 (define-function pval (expr)
-                 (and (> (verbose) 0) (println expr))
-                 (let ((result (eval expr)))
-                   (and (> (verbose) 1) (println "=> "result))
-                   result))
+  (and (> (verbose) 0) (println expr))
+  (let ((result (eval expr)))
+    (and (> (verbose) 1) (println "=> "result))
+    result))
 
 (define-function find-and-read (name)
-                 (or (and *load-path* (read (concat-string *load-path* name)))
-                     (read name)))
+  (or (and *load-path* (read (concat-string *load-path* name)))
+      (read name)))
 
 (define-function load (name)
-                 (let ((exps (find-and-read name)))
-                   (or exps (error "file not found or empty: "name))
-                   (list-do expr exps (pval expr))))
+  (let ((exps (find-and-read name)))
+    (or exps (error "file not found or empty: "name))
+    (list-do expr exps (pval expr))))
 
 (define *loaded*)
 
 (define-function require (name)
-                 (or (member? name *loaded*)
-                     (let ()
-                       (push *loaded* name)
-                       (load name))))
+  (or (member? name *loaded*)
+      (let ()
+	(push *loaded* name)
+	(load name))))
+
+(define-method length <string> ()		(string-length self))
+(define-method length <array> ()		(array-length self))
+
+(define-method at <string> (index)		(string-at self index))
+(define-method at <array> (index)		(array-at self index))
+
+(define-method set-at <string> (index value)	(string-at self index))
+(define-method set-at <array> (index value)	(array-at self index))
+
+(define-function contents-to-file-named (string path . options)
+  (let ((f (or (open path "w")
+	       (error "cannot open for writing: "path)))
+	(p (or (car options) putc)))
+    (for (i 0 (length string)) (p (at string i) f))
+    (close f)))
+
+(define-function contents-of-file-named (path)
+  (let ((f (or (open path)
+	       (error "cannot open for reading: "path)))
+	(s (array))
+	(c))
+    (while (set c (getc f))
+      (array-append s c))
+    (close f)
+    (array->string s)))
 #+end_src
 
 ** Utils
@@ -7570,10 +7787,9 @@ Common utilities.
 x86-32 compiler
 
 #+begin_src lisp :noweb yes :mkdirp yes :tangle src/emit.l
-(define __MACH__	'(t))
-(define __WINDOWS__	'( ))
+(require "osdefs.k")
 
-(define __PREFIX__ (if (or __MACH__ __WINDOWS__) "_" ""))
+(define __PREFIX__ (if (or (defined? '__MACH__) (defined? '__WIN32__)) "_" ""))
 
 (define-function string->type-name (str) (string->symbol (concat-string "<" (concat-string str ">"))))
 (define-function symbol->type-name (sym) (string->type-name (symbol->string sym)))
@@ -7690,12 +7906,16 @@ x86-32 compiler
 						  (set-array-at mangled outdex (digit-for (&  c 15)))	(set outdex (+ outdex 1))))))
       (set index (+ 1 index)))
     (array->string mangled)))
-      
+
 ;;; IA32 -- OPERANDS
 
-(let ((counter 0))
-  (define-function temp-label-name ()
-    (concat-string "_L_" (long->string (set counter (+ counter 1))))))
+(define *label-source* ())
+(define *label-counter* 0)
+
+(define-function temp-label-name ()
+  (let ((label (concat-string "_L_" (long->string (set *label-counter* (+ *label-counter* 1))))))
+    (and *label-source* (set label (concat-strings label"_"(car *label-source*)"_"(long->string (cdr *label-source*)))))
+    label))
 
 (define-operand LABEL (name) 	__PREFIX__(mangle-label (<LABEL>-name self)))
 (define-operand GI32 (name)	(<GI32>-name self))
@@ -8037,15 +8257,16 @@ x86-32 compiler
   (cons  return		gen-return)
   (cons  address-of	gen-address-of)))
 
-(define *prev-source* ())
-
 (define-method gen <pair> (comp)
-  (let ((source (oop-at self 2)))
-    (and (!= *prev-source* source)
-	 (car source)
-	 (let ()
-	   (gen comp COMMENT (list (car source) " " (cdr source)))
-	   (set *prev-source* source))))
+  (and (= 0 (optimised))
+       (let ((source (oop-at self 2)))
+	 (and (!= *label-source* source)
+	      (car source)
+	      (let ()
+		(set *label-source* source)
+		;;(gen comp DEFLABEL (LABEL (temp-label-name)))		;; DEBUG ONLY
+		;;(gen comp COMMENT (list (car source) " " (cdr source)))
+		(gen comp DEFLABEL (LABEL (temp-label-name)))))))
   (let* ((head  (car self))
 	 (arity (- (list-length self) 1))
 	 (op    (and (variable? head) (cadr (assq (<variable>-value head) (array-at operators arity))))))
@@ -8053,10 +8274,10 @@ x86-32 compiler
 	((array-at generators arity) op (cdr self) comp)
       (if (set op (cdr (assq head forms)))
 	  (op self comp)
-	(let ((tmps (map-with gen-tmp (cdr self) comp))
-	      (args (map-with gen-arg (cdr self) comp))
-	      (func (gen (car self) comp))
-	      (narg (list-length args)))
+	(let* ((tmps (map-with gen-tmp (cdr self) comp))
+	       (args (map-with gen-arg (cdr self) comp))
+	       (func (gen (car self) comp))
+	       (narg (list-length args)))
 	  (map2-with gen-move tmps args comp)
 	  (free-temps comp tmps)
 	  (free-args  comp args)
@@ -8085,7 +8306,7 @@ x86-32 compiler
 (define-method gen-definition <extern> (name comp)
   (let ((nlabel (LABEL                self.name        ))
 	(slabel (LABEL (concat-symbol self.name '$stub))))
-    (if __MACH__
+    (if (defined? '__MACH__)
 	(let ()
 	  (gen comp SECTION "__IMPORT,__pointers,non_lazy_symbol_pointers")
 	  (gen comp DEFLABEL slabel)
@@ -8155,4 +8376,47 @@ x86-32 compiler
 (define-form compile-end ()	(let ((env *globals*))
 				  (set *globals* (<env>-parent env))
 				  (gen-env env)))
+#+end_src
+
+*** bootstrap/mkosdefs.c
+
+#+begin_src c :noweb yes :mkdirp yes :tangle src/bootstrap/mkosdefs.c
+#include <stdio.h>
+
+#define STR(X)		#X
+
+#define defint(X)	printf("(define %s %d)\n", #X, X)
+#define defstr(X)	printf("(define %s \"%s\")\n", #X, STR(X))
+
+int main()
+{
+# ifdef __APPLE__
+    defint(__APPLE__);
+# endif
+# ifdef __ELF__
+    defint(__ELF__);
+# endif
+# ifdef __LITTLE_ENDIAN__
+    defint(__LITTLE_ENDIAN__);
+# endif
+# ifdef __MACH__
+    defint(__MACH__);
+# endif
+# ifdef __WIN32__
+    defint(__WIN32__);
+# endif
+# ifdef __USER_LABEL_PREFIX__
+    defstr(__USER_LABEL_PREFIX__);
+# endif
+# ifdef __i386__
+    defint(__i386__);
+# endif
+# ifdef __i586__
+    defint(__i586__);
+# endif
+# ifdef __linux__
+    defint(__linux__);
+# endif
+    return 0;
+}
 #+end_src

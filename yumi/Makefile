@@ -74,10 +74,10 @@ profile: .force
 	shark -q -1 -i ./eval repl.l test-pepsi.l
 
 osdefs.k: mkosdefs
-	./mkosdefs > $@
+	./bin/mkosdefs > bin/$@
 
-mkosdefs: mkosdefs.c
-	$(CC) -o $@ $<
+mkosdefs: src/bootstrap/mkosdefs.c
+	$(CC) -o bin/$@ $<
 
 cg: eval .force
 	./eval codegen5.l | tee test.s
@@ -85,18 +85,18 @@ cg: eval .force
 	ld  --build-id --eh-frame-hdr -m elf_i386 --hash-style=both -dynamic-linker /lib/ld-linux.so.2 -o test /usr/lib/gcc/i486-linux-gnu/4.4.5/../../../../lib/crt1.o /usr/lib/gcc/i486-linux-gnu/4.4.5/../../../../lib/crti.o /usr/lib/gcc/i486-linux-gnu/4.4.5/crtbegin.o -L/usr/lib/gcc/i486-linux-gnu/4.4.5 -L/usr/lib/gcc/i486-linux-gnu/4.4.5 -L/usr/lib/gcc/i486-linux-gnu/4.4.5/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/i486-linux-gnu/4.4.5/../../.. a.out -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/i486-linux-gnu/4.4.5/crtend.o /usr/lib/gcc/i486-linux-gnu/4.4.5/../../../../lib/crtn.o
 	./test
 
-test: emit.l eval.l eval
-	time ./eval -O emit.l eval.l > test.s && $(CC32) -c -o test.o test.s && size test.o && $(CC32) -o test test.o
+test: src/emit.l src/eval.l bin/eval
+	time ./bin/eval -O src/emit.l src/eval.l > test.s && $(CC32) -c -o test.o test.s && size test.o && $(CC32) -o test test.o
 
 time: .force
-	time ./eval -O emit.l eval.l eval.l eval.l eval.l eval.l > /dev/null
+	time ./bin/eval -O src/emit.l src/eval.l src/eval.l src/eval.l src/eval.l src/eval.l > /dev/null
 
 test2: test .force
-	time ./test -O boot.l emit.l eval.l > test2.s
+	time ./test -O src/boot.l src/emit.l src/eval.l > test2.s
 	diff test.s test2.s
 
 time2: .force
-	time ./test boot.l emit.l eval.l eval.l eval.l eval.l eval.l > /dev/null
+	time ./test src/boot.l src/emit.l src/eval.l src/eval.l src/eval.l src/eval.l src/eval.l > /dev/null
 
 test-eval: test .force
 	time ./test test-eval.l
@@ -187,9 +187,9 @@ profile-peg: .force
 	shark -q -1 -i ./eval parser.l peg.n test-peg.l > peg.m
 
 stats: .force
-	cat boot.l emit.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
-	cat eval.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
-	cat boot.l emit.l eval.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
+	cat src/boot.l src/emit.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
+	cat src/eval.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
+	cat src/boot.l src/emit.l src/eval.l | sed 's/.*debug.*//;s/;.*//' | sort -u | wc -l
 
 clean: .force
 	rm -rf src/ bin/ docs/ release/
@@ -197,8 +197,8 @@ clean: .force
 #----------------------------------------------------------------
 
 FILES = Makefile \
-	wcs.c buffer.c chartab.h eval.c gc.c gc.h \
-	boot.l emit.l eval.l test-emit.l \
+	src/bootstrap/wcs.c src/bootstrap/buffer.c src/bootstrap/chartab.h src/bootstrap/eval.c src/bootstrap/gc.c src/bootstrap/gc.h \
+	src/boot.l src/emit.l src/eval.l test-emit.l \
 	parser.l peg-compile.l peg-compile-2.l peg-boot.l peg.l test-peg.l test-repl.l \
 	repl.l repl-2.l mpl.l sim.l \
 	peg.g
