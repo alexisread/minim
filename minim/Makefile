@@ -3,7 +3,7 @@ MAJOR_VERSION = $(shell git describe --abbrev=0 --tags)
 MINOR_VERSION = $(shell git rev-list ${MAJOR_VERSION}.. --count)
 VERSION = ${MAJOR_VERSION}.${MINOR_VERSION}
 
-.DEFAULT_GOAL:= bin/yumi
+.DEFAULT_GOAL:= bin/minim
 .PHONY: test test-release deb deb-repo docs release docker-release clean
 .PRECIOUS: %.cpp %.gcc %.clang %.ino
 
@@ -22,13 +22,13 @@ endif
 
 .SUFFIXES:
 
-bin/yumi: tangle mkbin eval eval32 osdefs.k
+bin/minim: tangle mkbin eval eval32 osdefs.k
 
-run: bin/yumi
+run: bin/minim
 	rlwrap ./eval
 
 # tangle compiler generate src/ directory
-tangle: yumi.org
+tangle: minim.org
 	emacs -nw -Q --batch --eval \
 	"(progn                                                     \
            (require 'org)                                           \
@@ -41,7 +41,7 @@ tangle: yumi.org
 	   (when (locate-library \"ob-shell\")                      \
             (org-babel-do-load-languages                            \
               'org-babel-load-languages '((shell . t))))            \
-           (find-file \"yumi.org\")                               \
+           (find-file \"minim.org\")                               \
            (org-babel-tangle))"
 
 mkbin: 

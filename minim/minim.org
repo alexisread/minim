@@ -1,4 +1,4 @@
-#+title: Yumi Manual (river/context elision/minim/yumi)
+#+title: minim Manual (river/context elision/yumi/minim)
 #+STARTUP: hidestars
 #+TAGS: noexport(e)
 #+EXPORT_EXCLUDE_TAGS: noexport
@@ -7,15 +7,15 @@
 
 * Getting Started
 
-** What Is Yumi
+** What Is minim
 
-Yumi is a self-verified language-based operating system. To be able to be self-verified, 
+minim is a self-verified language-based operating system. To be able to be self-verified, 
 it needs to be as small as possible, while retaining enough features to be able to do formal verification on itself.
-At heart, Yumi is a practical system designed to run well on microcontrollers, and so features OS factilities for doing that.
+At heart, minim is a practical system designed to run well on microcontrollers, and so features OS factilities for doing that.
 
 ** Why a new language? - Features
 
-Yumi (aims) for the following features:
+minim (aims) for the following features:
 - Completely self-verified starting with hex code construction
 - Managed memory without GC - deterministic for hard realtime systems. This makes use of concat, components, ASAP/PRC, mainly immutable
 - Small enough to run in embedded systems
@@ -38,17 +38,17 @@ Yumi (aims) for the following features:
 ** Where's the code?
 
 The above is a large list to try to implement, so the code is a work in progress!
-Yumi is literately programmed in a similar fashion to [[https://github.com/nakkaya/ferret/blob/master/ferret.org][fennel]] ie. this document contains the code, which can be (un)tangled to be compiled,
+minim is literately programmed in a similar fashion to [[https://github.com/nakkaya/ferret/blob/master/ferret.org][fennel]] ie. this document contains the code, which can be (un)tangled to be compiled,
 so please consider this document as both a manifesto, and a repo for the code.
 
 *** Requirements:
-For the moment, linux, emacs, clang (maru.10), gcc (yumi folder), make.
+For the moment, linux, emacs, clang (maru.10), gcc (minim folder), make.
 On debian-based systems you can do:
 apt install build-essential emacs
 
 *** Building the code:
 http://fgiasson.com/blog/index.php/2016/10/26/literate-clojure-programming-tangle-all-in-org-mode/
-To (un)tangle the code from the document just type 'make tangle' from the yumi folder
+To (un)tangle the code from the document just type 'make tangle' from the minim folder
 
 
 
@@ -141,7 +141,7 @@ TODO
 
 * Roadmap
 
-In order to create a system that can fit all the feature requirements, Yumi steals ideas shamelessly from other languages, but we need to find compatible features.
+In order to create a system that can fit all the feature requirements, minim steals ideas shamelessly from other languages, but we need to find compatible features.
 Maru is a practical dynamic COLA, ie. the user has control over all phases of application development, deployment and execution inc hardware eg. FPGA backend.
 As such, we should be able to iteratively evolve the maru system to include other features that we require, specifically fine-grained control over static types, for ease of reasoning,
 and optimisation of execution. 
@@ -166,7 +166,7 @@ to complete the full metacircular toolchain.
 
 One of the more active debates in the Haskell community is with regard to I/O as a side effect of monadic programming. Perhaps a more flexible model lies with
 Algebraic Effects, and given that Koka makes good use of them in conjunction with static (Hindley-Milner) type analysis and concurrency with dynamic binding,
-we can clearly see that these features dovetail well with maru in extending our featureset to that required by Yumi.
+we can clearly see that these features dovetail well with maru in extending our featureset to that required by minim.
 Koka is written in Haskell, but the team maintain C libraries, and we also may be able to use zero-cost effect handlers to provide a path to controlling side effects
 and transforming dynamic bindings and operation to static constructs.
 
@@ -199,8 +199,8 @@ It is still useful to refer to the above constructs by their semantic name, desp
 To be able to build the system from scratch ie. not relying on even firmware, we need to look at bootstrapping.
 The impetus here is one of security, technically we cannot trust anything not checked by-eye. 
 In the most primitive case (stage0), we would look to type in instructions that create a hex editor, with which we can assemble a hex assembler, and then use that
-to build Yumi. Sectorlisp is very small so a good model for how to build a minimal system, it also is portable across different platforms, though interpreted.
-Ribbit has an AOT compiler and multiple VM backends, so Yumi will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
+to build minim. Sectorlisp is very small so a good model for how to build a minimal system, it also is portable across different platforms, though interpreted.
+Ribbit has an AOT compiler and multiple VM backends, so minim will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
 build toolchain.
 
 * License
@@ -886,7 +886,7 @@ Public License instead of this License.  But first, please read
 
 For every module there is a C equivalent, for bootstrapping.
 We are starting with the maru implementations, and building on that. As such, the syntax is lisp to start with.
-We list the maru-lisp (later Yumi) modules after the C versions.
+We list the maru-lisp (later minim) modules after the C versions.
 
 ** Modules
 
