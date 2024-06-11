@@ -1,21 +1,22 @@
-#+title: minim Manual (river/context elision/yumi/minim)
+#+title: Minim Manual (river/context elision/yumi/minim)
 #+STARTUP: hidestars
 #+TAGS: noexport(e)
 #+EXPORT_EXCLUDE_TAGS: noexport
 #+SETUPFILE: org-mode.conf
-#+OPTIONS: H:10 author:nil
+#+OPTIONS: H:10 author:Alexis Read
 
 * Getting Started
 
 ** What Is minim
 
-minim is a self-verified language-based operating system. To be able to be self-verified, 
+Minim is a self-verified language-based operating system. To be able to be self-verified, 
 it needs to be as small as possible, while retaining enough features to be able to do formal verification on itself.
-At heart, minim is a practical system designed to run well on microcontrollers, and so features OS factilities for doing that.
+At heart, Minim is a practical system designed to run well on microcontrollers, and so features OS facilities for doing that.
+Hopefully minim will get closer to solving the hard problems in computing: trust, and ordering.
 
 ** Why a new language? - Features
 
-minim (aims) for the following features:
+Minim (aims) for the following features:
 - Completely self-verified starting with hex code construction
 - Managed memory without GC - deterministic for hard realtime systems. This makes use of concat, components, ASAP/PRC, mainly immutable
 - Small enough to run in embedded systems
@@ -38,17 +39,17 @@ minim (aims) for the following features:
 ** Where's the code?
 
 The above is a large list to try to implement, so the code is a work in progress!
-minim is literately programmed in a similar fashion to [[https://github.com/nakkaya/ferret/blob/master/ferret.org][fennel]] ie. this document contains the code, which can be (un)tangled to be compiled,
+Minim is literately programmed in a similar fashion to [[https://github.com/nakkaya/ferret/blob/master/ferret.org][fennel]] ie. this document contains the code, which can be (un)tangled to be compiled,
 so please consider this document as both a manifesto, and a repo for the code.
 
 *** Requirements:
-For the moment, linux, emacs, clang (maru.10), gcc (minim folder), make.
+For the moment, linux, emacs, clang (maru.10), gcc (Minim folder), make.
 On debian-based systems you can do:
 apt install build-essential emacs
 
 *** Building the code:
 http://fgiasson.com/blog/index.php/2016/10/26/literate-clojure-programming-tangle-all-in-org-mode/
-To (un)tangle the code from the document just type 'make tangle' from the minim folder
+To (un)tangle the code from the document just type 'make tangle' from the Minim folder
 
 
 
@@ -86,7 +87,8 @@ https://shenlanguage.org/TBOS/tbos.html
 *** 39LOC logic language http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf:
 http://minikanren.org/minikanren-and-prolog.html differences between prolog and (micro/mini) kanren 
 - lazy streams, threadsafe, complete interleaving search, relational (equality), 39LOC, symbolic constraints, circular checking
-https://github.com/webyrd/faster-miniKanren has =/= operator, and checks types efficiently 
+https://github.com/webyrd/faster-miniKanren has =/= operator, and checks types efficiently
+https://arxiv.org/abs/1701.00633v1 framework for extending microkanren with constraints (CLP) - 100 lines racket macros, shows type checking as well
 
 *** To understand https://github.com/udem-dlteam/ribbit:
 http://www.iro.umontreal.ca/~feeley/papers/YvonFeeleyVMIL21.pdf
@@ -101,11 +103,26 @@ https://justine.lol/sectorlisp2/
 http://bootstrappable.org/
 https://github.com/oriansj/stage0
 
+*** To understand types
+Tagged typing...
+https://www.erlang.org/doc/reference_manual/typespec.html Atomic types
+
+*** To understand environments, scope and capabilities
+http://mumble.net/~jar/pubs/secureos/secureos.html
+
 *** To understand types of GC:
+https://www.rfleury.com/p/untangling-lifetimes-the-arena-allocator
 https://github.com/carp-lang/Carp/blob/master/docs/Memory.md
 https://www.microsoft.com/en-us/research/uploads/prod/2020/11/perceus-tr-v4.pdf
 https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-908.pdf
 https://concurrency.ch/Content/publications/Blaeser_ETH_Diss_2007.pdf
+https://nim-lang.org/blog/2020/10/15/introduction-to-arc-orc-in-nim.html
+https://austral-lang.org/spec/spec.html#goals
+https://www.microsoft.com/en-us/research/uploads/prod/2019/06/mimalloc-tr-v1.pdf memory allocator designed to work with RC, prioritizes data locality
+https://www.researchgate.net/publication/221600574_A_Compacting_Garbage_Collector_for_Unidirectional_Heaps
+https://www.researchgate.net/publication/220752316_A_study_of_concurrent_real-time_garbage_collectors Clover specifically
+https://aardappel.github.io/lobster/memory_management.html
+https://verdagon.dev/grimoire/grimoire
 
 *** To understand database similarity to a distributed OS:
 https://github.com/hydro-project/anna
@@ -137,11 +154,114 @@ https://github.com/nim-lang/nimble#readme
 
 ** Helloworld Examples
 
-TODO
+This syntax has changed somewhat since the initial draft of this document. Maru relies on a C compiler to bootstrap, so it was always going to require a 
+lower-level system to target. This target now appears to be Forth, a minimal VM that is both lower and higher level than the underlying CPU, that can be 
+boostrapped from essentially pencil and paper.
+Forth is used to bootstrap new hardware, and can run in under 1k RAM. As a dual of lisp it can be thought of as a stream (of atoms) consumer, whereas lisp forms an 
+AST from the source text atoms and then operates on that. As far as parsing goes then, forth is a left->right stream of words, lisp is parsed left-right and executed
+right->left effectively, as evaluation starts at the leaves and works up the AST.
+Executing right->left is similar to mathematics in that for f(g(x)) we evaluate g(x) and plug that into f().
+Traditional forth has no variables, it is a point-free language and the programmer has to keep track of the stack state somehow. It is less easy to acclimatise to
+someone else's code than more explicit languages. Rebol is a concatenative language that handles variables as well, and the syntax is somewhat modelled after it.
 
+*** Language rules
+- Code is parsed right->left similar (overall) to lisp, but we consume/execute the stream of atoms/words immediately unlike lisp which consumes the whole code block first
+- Whitespace is the separator between atoms. Code is not indentation sensitive.
+- There will be a standard lint style. Obviously this can be abandoned/overriden where required eg. code-inside-messages, personal usage.
+- Symbols are normalised with respect to capitalization eg. total = TOTAL, but will respect the capitalization at assignment.
+- Brackets are all semantically the same ie. () = {} = [] = <>. As such we can colour the code depending on form or nested depth.
+- Brackets denote a block, which may have symbols for static or dynamic variables in. We need a word to define what happens to the block eg. fn [mycode] compiles an anonymous function
+- Brackets do not require whitespace surrounding them
+- Atoms are typed, starting with fundamental types and extending to compound (user) types
+- : at the end of an atom is assign. This extends to linking related attributes eg. myint: int: 10 assigns 10 to myint, which is an integer
+- Adopting the style of Rebol's dialects, Special forms are simply a type constructor eg. IF is a function, which is also a type, it's init has a form of [condition][body]
+- We can construct ASTs using branching forms eg. IFELSE or simply PAIRs. As this is a homoiconic syntax ie. code=data, we can build complex control flow incrementally
+- Control flow is first-class ie. we can use algebraic effects to branch the control flow. This can be built up incrementally including with pattern-matching
+- There is the potential here to develop cycles. Dadelus-style checking in conjunction with a backref hashtable is used at compiletime to try to locate these cycles
+- Similarly for GC, we use reference counting (hard realtime managed) on acyclic structures with the above cycle checking, which can be done incrementally/realtime.
+- For the RC to be threadsafe, we use 2 PNcounters on the RC field, or an atomic cpu instruction (implementation dependent).
+- Types and therefore signatures (aka a parameter block) can be generically typed
+- Truth ie. booleans, empty lists, nulls, undefined values, is as per Kamilalisp. We strive for a mathematically consistent base here
+- Contrary to Lisps, blocks don't evaluate by default in an expression, you need to eval them explicitly
+- eval returns the first expression in a block (as a result of right->left evaluation)
+- Naked anonymous functions are compiled and executed immediately. This gives us the ability to have an interactive shell/repl with compilation
+- Naked blocks are also evaluated and executed immediately. The shell implicitly adds a surrounding bracket and eval to the input
+- The function form is fn [params][body] We usually use () for the parameter block, and [] for the body
+- , is a form separator. It closes all brackets below the form bracket, see the complex example.
+- Comments, help pages (reference), recursive docs, wizards and tests must be inside a module, this enforces scoped and linked documentation.
+
+So for helloworld we have: . "Helloworld"
+which compiles the "Helloworld" string to a literal, and stores it in temp storage (on a data stack),
+compiles a link to the print instruction and stores that next to the literal (on the stack).
+As there are implicit brackets around the shell command, this is an anonymous block and is executed immediately.
+
+As a function helloworld is: fn ()[. "Helloworld"] 
+which compiles the "Helloworld" string to a literal, and stores it in temp storage (on a data stack),
+compiles a link to the print instruction and stores that next to the literal (on the stack),
+closes the block, discards the empty parameter block, reads that this is a function, reads then that it is anonymous,
+and so executes the block and clears the temp storage (pops the stack)
+
+A more complex example is:
+myword: fn (arg1: int arg2: int: 10 -> total)[* arg1 arg2] 
+this assigns the myword symbol to this new function. arg1 is an integer and arg2 is as well, with a default value of 10. 
+The output algebraic effect of this function is TOTAL and the function simply adds two integers. -> is the separator between input and output attributes.
+To execute this function we do at the shell:
+. myword + 6 7,8
+This shows the form separator at work. We could use brackets to get: [. myword [+ [6 7]] 8] but the form separator shows where the close bracket is 
+ie. + operates on only two atoms, leaving two atoms for myword to correctly evaluate
++ is a variadic function that can sum multiple atoms, leading to the potential ambiguity (without the separator) of [. myword [+ [6 7 8]]] which would fail.
+
+In terms of execution, we parse right->left pushing 8 7 6 onto the stack in that order, then adding (popping) the top two elements and pushing the result 13,
+then executing myword which adds the top two elements, pushing 21 onto the stack for print to consume and output to the shell.
+
+Types are checked at compiletime. auto-typecasting is allowed if a type relationship has been defined eg. int (is a subset of) <- float
+Variables are assumed to be dynamic unless annotated eg. mystaticint: static: int
+Dynamic variables are more deterministic at runtime unlike static variables which have to be looked up, potentially up the scoping tree.
+For static variable handling see the Dreams system. We evaluate static variables with DID rather than EVAL/DOES as they are fixed at compiletime.
+Variables and other atoms can have several attributes, linked by assign chains: Shared (ie. implements threadsafe accessors), local (destroyed after execution),
+acyclic (refs are guaranteed to be by the compiletime cycle checker), type, defaultvalue, static, mutable, endian,
+effect (eg. cpu register, input address, mustberefcounted).
+
+Modules can be considered object templates, instantiated at runtime. Following the Dreams system they are denoted by: mymod: mod attributes...[public][private]
+All words go into the dictionary aka symbol table, but private ones are hidden - access is via a concurrent dictionary type which manages the word/module capabilities
+A signed ULID/contenthash is created when the module is created, this is the unique module ID.
+From this, we can see that types are simply modules with a constructor form, identity function, and getter and setter handles for capability management.
+(ie. if you have the setter handle for the instantiated type, you can modify it, if you have the getter you can access it).
+ACI resolvers in the type allow them to fit into lattices, which allows for fully concurrent access.
+
+Modules are namespaced by the module ID (called the head) - an optionally signed (ie. the public key) (hash of the module+ulid date).
+We may require encrypted and signed links (and root field) to other modules, to be able to form a hash graph. Form of the graph:
+{head, root, encryptedlinks{ linkID: { senderpublickey, recipientpublickey, encryptedbody }}}
+A new version of the module can then have a secure link to the older version. We keep a version field as well for convenience.
+Getters/setters can require UCAN tokens for authorization, other than just the word address (generally local access).
+As such, we have several types of modules available in the language, inheriting from the base module prototype which always has a module ID.
+
+Environments are instantiated forms of modules, and contain capabilities ie. W7
+Bindings move between modules via another kind of environment-like object called a structure. A structure is a particular package's implementation of a particular 
+interface; and an interface is a set of names, with optional types attached ie. a type.
+The complier enforces these capabilities
+
+Comments, assertions and tests are all a live part of the codebase. As per many systems (Elixir testdocs, Retroforth unu, Clojure orgmode) we try to create a literal
+system here, but possibly more structured than previous systems.
+For speed, we prefer single-pass compilation, and to that end djot + latex + mermaid is a great documentation set of DSLs. 
+From there we require a way of interleaving with the code and scoping comments to specific functions/atoms/blocks/modules - we require 'recursive documentation'
+If we take the literal approach ie. docs first, we mark code via ```minim blocks, and from code we mark docs via ```jdot. This can be recursive to selectively expose code
+Similarly with tests, we mark a test for a function with a linked test block inside the surrounding docs...
+Comments are separate from documentation, as they are details/why for the programmer rather than the overview/why of a piece of code. We can also document word signatures
+and document the references between words, though this may be better/more comprehensible to follow an execution thread.
+As all of these are scoped, at compiletime you can decide whether to include or evaluate them (comments and code).
+As such, help pages can be either the documented source code, in-memory literals, or compiled to a dedicated file (like Freeforth). 
+In all cases the help' word does a regex on strings.
+Wizards are basically a link from one documentation block to another. Djot notation defines a reference link which is used here to move [forward][moduleID]
+and [back][moduleID] through the documentation blocks. We can also use reference links within multiple blocks in a module.
+As the compiler passes over these blocks, we can use this recursive exposure to generate documentation/calculations etc. to output a document snapshot like a report.
+If we have a constraint-modelled redUI/ksworld (but with Dadelus temporal specification and push dataflow based on algebraic effects with before/after substitution)
+DSL as well, then we can define interactive scenes for these wizards.
+
+#+index: roadmap
 * Roadmap
 
-In order to create a system that can fit all the feature requirements, minim steals ideas shamelessly from other languages, but we need to find compatible features.
+In order to create a system that can fit all the feature requirements, Minim steals ideas shamelessly from other languages, but we need to find compatible features.
 Maru is a practical dynamic COLA, ie. the user has control over all phases of application development, deployment and execution inc hardware eg. FPGA backend.
 As such, we should be able to iteratively evolve the maru system to include other features that we require, specifically fine-grained control over static types, for ease of reasoning,
 and optimisation of execution. 
@@ -172,8 +292,8 @@ and transforming dynamic bindings and operation to static constructs.
 
 To add to the static needs, to be deterministic ie. realtime, we cannot use a GC to manage memory due to the unpredictability *and* size requirements of microcontrollers
 Both Perceus reference counting and ASAP static analysis require a good formalism of computation as per Koka to be able to fully check memory bounds (including cycles).
-It is clear from Sectorlisp and Ribbit that we can run GC in a small system, however it is also clear that the less garbage generated, the less there is to clear up
-- Sectorlisp makes do with immutable cells and acyclic operation. Concatenative languages can go one better in that mutable data is passed in-place (in memory)
+It is clear from Sectorlisp and Ribbit that we can run GC in a small system, however it is also clear that the less garbage generated, the less there is to clear up -
+Sectorlisp makes do with immutable cells and acyclic operation. Concatenative languages can go one better in that mutable data is passed in-place (in memory)
 from function to function, so there is little to clear up.
 Koka uses a phrase FBIP, functional-but-in-place, to describe a similar set of optimisations for monadic ie. chainable operations, and we aim to use that here,
 along with a suitable concatenative syntax.
@@ -200,8 +320,68 @@ To be able to build the system from scratch ie. not relying on even firmware, we
 The impetus here is one of security, technically we cannot trust anything not checked by-eye. 
 In the most primitive case (stage0), we would look to type in instructions that create a hex editor, with which we can assemble a hex assembler, and then use that
 to build minim. Sectorlisp is very small so a good model for how to build a minimal system, it also is portable across different platforms, though interpreted.
-Ribbit has an AOT compiler and multiple VM backends, so minim will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
+Ribbit has an AOT compiler and multiple VM backends, so Minim will follow an architecture of AOT compiling to bytecode, with the VM being modeled around a Sectorlisp
 build toolchain.
+
+* Atomic types
+owner bit, owner/weak ref
+type safety in w7 is extension of safe parent types ie. intersection visibility
+read and write barriers can be done in object getters and setters
+
+* Memory management
+Memory management strategies fundamentally affect the language - do we want hard realtime management? Do we wish to manage cyclic data structures? How intrusive do we
+want this to be for the programmer? Are we allowing shared (between threads) mutable state? Do we have object finalizers?
+
+Minim has the following requirements:
+Hard realtime, handle cycles, shared mutable state.
+With the current state of memory management, this requires that we make tradeoffs in a fine-grained fashion 
+eg. shared mutable state might be used for some data structures and thus have a write barrier (slower), stacks are per thread though and run quicker.
+The vale language is effectively built around it's management strategies, and encourages a divide-and-conquer approach. Minim will do the same.
+Looking at Forth which is very memory efficient, we can see that the callstack (return stack) and the datastack manage to clean up memory efficiently 
+- un-used results are simply popped off the stacks. The Forth dictionary, in most Forths, is unbounded ie. we can consider it a symbol table constructed from a linked
+list, which is left to grow with a restart compacting it. 
+In addition, the use of objects will require management. Dreams pushes the objects into the dictionary, with stacks managing the object usage.
+This dictionary is a good candidate for several memory management techniques, mostly stolen from Vale:
+We can start with generational references as a substitute for reference counting. Immutable region borrowing (Vale, isolates in Nim and Pony),
+FBIP (See Austral, Koka), ownership analysis (lobster) and scope-based management (See ARC in Nim) can all be used to elide these generational references,
+through use of microkanren-based constraint modelling at compile time. These imply the use of linear types ie. an object can only have one owner, 
+any other client can read using a reference.
+
+The remaining issues are how to deal with cyclic data structures (and resulting GC cycles), and how to interleave these different management types.
+As per Vale and the arena blog post above, we can select compatible strategies, in this case generational refs with all analysis done using microkanren.
+For cylic structures, provided the cyclic structure is within a region, we are fine as the region can be collected. If the cyclic structure does not modify global 
+references we have acyclic roots, and so should be able to avoid GC cycles and collect the cyclic structure.
+For the Forth dictionary, it can be considered unidirectional. Under unidrectional memory, we cannot have cycles, unless we use a reference pointing backwards.
+This can be considered a candidate for cycle checking, with the owner being the parent, with child back and forward refs linked to the lifetime.
+Back references are also known as weak refs, removing them or the parent has no bearing on the weak ref, so cycle breaking happens automatically when the parent is dropped.
+As such, back references in the context of unidrectional memory can be considered a mechanism for creating cycles, all cycles must contain a weak reference.
+References can be annotated by the programmer (owner or weak), so they choose where cycle-breaking occurs, or left to the compiler to work out - all backrefs are weak.
+To enforce this unidirectional memory, we need to ensure new allocations are in the memory direction, and try to compact the heap periodically.
+The compaction algorithm can be found in the above reading list, but also appears in Freeforth (Hid'm word) and the GC in Sectorlisp2.
+We can run this incrementally on a dictionary/symbol table by marking dead memory blocks, and a pointer to where in the heap we have got to.
+This works as we have a base entry point rather than direct entry to the table, direct references would have to be updated on compaction.
+
+For runtime, memory gets and sets happen through the type handles, which is where we can put the read/write barriers, as well as GC instruction insertion - we don't 
+require a scheduler this way, and GC can be estimated based on the object usage.
+The compiler can enforce that strong refs are correctly ordered, so we only require an ispointer bit to indicate and enforce bounds checking.
+We may not need to compact used memory all the time, the allocator could flag when it requires a weak ref ie. a back pointer, which may fit in uncompacted memory. 
+This is an optimisation that can be done at a later date.
+
+Note that the GC algorithm works only for single threads, for shared memory we require a way of managing copy operations while mutators operate.
+The Clover collector blocks on copy while there is a magic generation value (max) in the generation pointer. We can use a CAS bit instead, as we have 2 spare alignment
+bits to work with (16bit OS), given the generation pointer. We scan and compact simultaneously, with object pointer updates after. The GC has exclusive access to the
+CAS bit.
+
+All of the analysis-based management will be run at compile time, using the constraint modelling. Kanrens work upon lists as the fundamental construct
+(we can model matrices and higher tensors as a list of arrays), so will work well on memory constructs in minim. Note that analysis will depend on the type of an
+object, so the type checker will also be written in microkanren, same as for capability management, which can also be considered a linear-type (ownership) problem.
+
+So for an object, we require a generational ref which is pointer+tag, we require a type pointer, and a collection bit for the compactor (?). Other configurable bits ...
+pointer bit (type bits), owner/weak bit allows us to do GC at runtime as well as compile time.
+cas bit works as only one owner/setter ref.
+
+Compiler algo is determine object, go to tagged object to get pointers, check annotated pointer refs obey weak ref rule WRR, compile object allocating pointers per WRR
+GC algo is check object header, go to tagged object to get pointers, check pointer refs a la uniGGC and compact
 
 * License
 
